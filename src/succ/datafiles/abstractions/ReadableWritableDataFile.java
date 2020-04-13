@@ -1,6 +1,7 @@
 package succ.datafiles.abstractions;
 
 import falsepattern.Out;
+import succ.style.FileStyle;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -14,7 +15,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
     /**
      * Rules for how to format new data saved to this file.
      */
-    public AtomicReference<FileStyle> style = new AtomicReference<>(FileStyle.getDefault());
+    public AtomicReference<FileStyle> style = new AtomicReference<>(FileStyle.defaultStyle);
 
     /**
      * If true, the DataFile will automatically save changes to disk with each Get or Set.
@@ -234,9 +235,11 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
             List<String> currentKeys = new ArrayList<>(map.size());
             for (TKey key: map.keySet()) {
                 String keyText = BaseTypes.serializeBaseType(key, style);
-                Out<String> whyNot = new Out<>(String.class);
-                if (!Utilities.isValidKey(keyText, whyNot)) {
-                    throw new RuntimeException("Can't save file as this dictionary. A key (" + keyText + ") is not valid: " + whyNot.value);
+                {
+                    Out<String> whyNot = new Out<>(String.class);
+                    if (!Utilities.isValidKey(keyText, whyNot)) {
+                        throw new RuntimeException("Can't save file as this dictionary. A key (" + keyText + ") is not valid: " + whyNot.value);
+                    }
                 }
 
                 currentKeys.add(keyText);

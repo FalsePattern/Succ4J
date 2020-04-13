@@ -1,4 +1,4 @@
-package succ;
+package succ.style;
 
 /**
  * Rules for various aspects of how generated SUCC data is formatted.
@@ -52,11 +52,7 @@ public class FileStyle {
      * The number of spaces used to indent a child line under its parent. Must be at least 1.
      */
     public void setIndentationInterval(int value) {
-        if (value < 1) {
-            throw new IndexOutOfBoundsException("IndentationInterval must be at least 1. You tried to set it to " + value);
-        } else {
-            indentationInterval = value;
-        }
+        indentationInterval = tryValue(value, 1, "indentationInterval");
     }
 
     /**
@@ -70,7 +66,7 @@ public class FileStyle {
      * The number of spaces between the colon and the value in a key node. Must be at least 0.
      */
     public void setSpacesAfterColon(int value) {
-
+        spacesAfterColon = tryValue(value, 0, "spacesAfterColon");
     }
 
     /**
@@ -84,6 +80,14 @@ public class FileStyle {
      * The number of spaces between the dash and the value in a list node. Must be at least 0.
      */
     public void setSpacesAfterDash(int value) {
-        this.spacesAfterDash = spacesAfterDash;
+        spacesAfterDash = tryValue(value, 0, "spacesAfterDash");
+    }
+
+    private int tryValue(int value, int minimum, String fieldName) {
+        if (value < minimum) {
+            throw new IndexOutOfBoundsException(fieldName + "cannot be less than " + minimum + ". You treid to set it to " + value);
+        }
+
+        return value;
     }
 }
