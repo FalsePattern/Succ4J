@@ -1,6 +1,7 @@
 package succ.parsinglogic.types;
 
 import succ.Utilities;
+import succ.parsinglogic.NodeManager;
 import succ.parsinglogic.nodes.KeyNode;
 import succ.parsinglogic.nodes.ListNode;
 import succ.parsinglogic.nodes.Node;
@@ -23,7 +24,7 @@ public class CollectionTypes {
         } else if (Set.class.isAssignableFrom(collectionType)) {
             setSetNode(node, (Set<K>) data, elementType, style);
         } else if (Map.class.isAssignableFrom(collectionType)) {
-            setMapNode(node, data, collectionType, style);
+            setMapNode(node, (Map<?, ?>)data, Object.class, elementType, style, false);
         } else if (node.childNodeType == NodeChildrenType.list) {
             throw new IllegalArgumentException(collectionType.getTypeName() + " is not a supported collection type");
         } else {
@@ -38,11 +39,11 @@ public class CollectionTypes {
         if (collectionType.isArray()) {
             data = retrieveArray(node, (Class<?>)collectionType);
         } else if (List.class.isAssignableFrom(collectionType)) {
-            data = retrieveList(node, (Class<List<T>>)collectionType, elementType);
+            data = retrieveList(node, (Class<List<?>>) collectionType, elementType);
         } else if (Set.class.isAssignableFrom(collectionType)) {
-            data = retrieveSet(node, collectionType, elementType);
+            data = retrieveSet(node, (Class<Set<?>>) collectionType, elementType);
         } else if (Map.class.isAssignableFrom(collectionType)) {
-            data = retrieveMap(node, collectionType, elementType);
+            data = retrieveMap(node, (Class<Map<?, ?>>)collectionType, Object.class, elementType);
         } else if (node.childNodeType == NodeChildrenType.list) {
             throw new IllegalArgumentException(collectionType.getName() + " is not a supported collection type");
         }
@@ -85,8 +86,8 @@ public class CollectionTypes {
         }
     }
 
-    private static <T> List<T> retrieveList(Node node, Class<List<T>> listType, Class<T> elementType) {
-        List<T> resultList = null;
+    private static List<?> retrieveList(Node node, Class<List<?>> listType, Class<?> elementType) {
+        List<?> resultList = null;
         try {
             resultList = listType.getConstructor().newInstance();
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
@@ -95,24 +96,24 @@ public class CollectionTypes {
         int size = node.getChildNodes().size();
         for (int i = 0; i < size; i++) {
             ListNode child = node.getChildAddressedByListNumber(i);
-            T item = NodeManager.getNodeData(child, elementType);
-            resultList.add(item);
+            Object item = NodeManager.getNodeData(child, elementType);
+            ((List)resultList).add(item);
         }
 
         return resultList;
     }
 
-    private static <T> void setSetNode(Node node, Set<T> set, Class<T> elementType, FileStyle style) {
+    private static void setSetNode(Node node, Set<?> set, Class<?> elementType, FileStyle style) {
         int size = set.size();
         node.capChildCount(size);
-        Iterator<T> iterator = set.iterator();
+        Iterator<?> iterator = set.iterator();
         for (int i = 0; i < size; i++) {
             NodeManager.setNodeData(node.getChildAddressedByListNumber(i), iterator.next(), elementType, style);
         }
     }
 
-    private static <T> Set<T> retrieveSet(Node node, Class<Set<T>> setType, Class<T> elementType) {
-        Set<T> resultSet = null;
+    private static Set<?> retrieveSet(Node node, Class<Set<?>> setType, Class<?> elementType) {
+        Set<?> resultSet = null;
         try {
             resultSet = setType.getConstructor().newInstance();
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
@@ -122,14 +123,14 @@ public class CollectionTypes {
         int size = node.getChildNodes().size();
         for (int i = 0; i < size; i++) {
             ListNode child = node.getChildAddressedByListNumber(i);
-            T item = NodeManager.getNodeData(child, elementType);
-            resultSet.add(item);
+            Object item = NodeManager.getNodeData(child, elementType);
+            ((Set)resultSet).add(item);
         }
 
         return resultSet;
     }
 
-    private static <K, V> void setMapNode(Node node, Map<K, V> map, Class<K> keyType, Class<V> valueType, FileStyle style, boolean forceArrayMode) {
+    private static void setMapNode(Node node, Map<?, ?> map, Class<?> keyType, Class<?> valueType, FileStyle style, boolean forceArrayMode) {
         boolean keyIsBase = BaseTypes.isBaseType(keyType);
 
         if (keyIsBase && !forceArrayMode && !style.alwaysArrayDictionaries) {
@@ -138,8 +139,8 @@ public class CollectionTypes {
             }
 
             List<String> currentKeys = new ArrayList<>(map.size());
-            for (K key: map.keySet()) {
-                V value = map.get(key);
+            for (Object key: map.keySet()) {
+                Object value = map.get(key);
                 String keyAsText = BaseTypes.serializeBaseType(key, keyType, style);
 
                 if (!Utilities.isValidKey(keyAsText)) {
@@ -162,14 +163,14 @@ public class CollectionTypes {
                 node.clearChildren(NodeChildrenType.list);
             }
 
-            Set<Map.Entry<K, V>> array = map.entrySet();
+            Set<?> array = map.entrySet();
             NodeManager.setNodeData(node, array, array.getClass(), style);
         }
     }
 
-    private static <K, V> Map<K, V> retrieveMap(Node node, Class<K> keyType, Class<V> valueType, Class<Map<K, V>> mapType) {
+    private static Map<?, ?> retrieveMap(Node node,  Class<Map<?, ?>> mapType, Class<?> keyType, Class<?> valueType) {
         boolean keyIsBase = BaseTypes.isBaseType(keyType);
-        Map<K, V> map;
+        Map<?, ?> map;
         try {
             map = mapType.getConstructor(int.class).newInstance(node.getChildNodes().size());
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
@@ -178,8 +179,8 @@ public class CollectionTypes {
         if (keyIsBase && node.childNodeType == NodeChildrenType.key) {
             for (Node child : node.getChildNodes()) {
                 String childKey = ((KeyNode) child).getKey();
-                K key = BaseTypes.parseBaseType(childKey, keyType);
-                V value = NodeManager.getNodeData(child, valueType);
+                Object key = BaseTypes.parseBaseType(childKey, keyType);
+                Object value = NodeManager.getNodeData(child, valueType);
             }
         } else {
             /*Set<Map.Entry<K, V>> array = NodeManager.getNodeData<Set<Entry<K, V>>>(node);

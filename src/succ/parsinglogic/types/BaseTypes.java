@@ -23,12 +23,12 @@ import static succ.parsinglogic.ParsingLogicExtensions.*;
 public class BaseTypes {
 
     @SuppressWarnings("unchecked")
-    public static <T> String serializeBaseType(T thing, Class<T> type, FileStyle style) {
+    public static String serializeBaseType(Object thing, Class<?> type, FileStyle style) {
         if (baseSerializeMethods.containsKey(type)) {
-            return ((SerializeMethod<T>)baseSerializeMethods.get(type)).serialize(thing);
+            return baseSerializeMethods.get(type).serialize(thing);
         }
         if (baseStyledSerializeMethods.containsKey(type)) {
-            return ((StyledSerializeMethod<T>)baseStyledSerializeMethods.get(type)).serialize(thing, style);
+            return baseStyledSerializeMethods.get(type).serialize(thing, style);
         }
         if (type != null && type.isEnum()) {
             return serializeEnum((Enum<?>)thing, style);
@@ -37,7 +37,7 @@ public class BaseTypes {
         throw new RuntimeException("Cannot serialize base type " + (type != null ? type.getName() : "null") + " - are you sure it is a base type?");
     }
 
-    public static <T> void setBaseTypeNode(Node node, T thing, Class<T> type, FileStyle style) {
+    public static <T> void setBaseTypeNode(Node node, Object thing, Class<?> type, FileStyle style) {
         node.capChildCount(0);
         node.childNodeType = NodeChildrenType.none;
         node.setValue(serializeBaseType(thing, type, style));
@@ -51,10 +51,10 @@ public class BaseTypes {
         try {
             {
                 if (baseParseMethods.containsKey(type)) {
-                    return ((ParseMethod<T>)baseParseMethods.get(type)).parse(text);
+                    return type.cast(baseParseMethods.get(type).parse(text));
                 }
                 if (type != null && type.isEnum()) {
-                    return (T)parseEnum(text, type);
+                    return type.cast(parseEnum(text, type));
                 }
             }
         } catch (Exception e) {
@@ -74,19 +74,19 @@ public class BaseTypes {
     }
 
     @FunctionalInterface
-    public interface SerializeMethod<T> {
-        String serialize(T thing);
+    public interface SerializeMethod {
+        String serialize(Object thing);
     }
     @FunctionalInterface
-    public interface ParseMethod<T> {
-        T parse(String text);
+    public interface ParseMethod {
+        Object parse(String text);
     }
     @FunctionalInterface
-    public interface StyledSerializeMethod<T> {
-        String serialize (T thing, FileStyle style);
+    public interface StyledSerializeMethod {
+        String serialize (Object thing, FileStyle style);
     }
 
-    public static <T> void addBaseType(Class<T> type, SerializeMethod<T> serializeMethod, ParseMethod<T> parseMethod) {
+    public static void addBaseType(Class<?> type, SerializeMethod serializeMethod, ParseMethod parseMethod) {
         if (isBaseType(type)) {
             throw new RuntimeException("Type " + type.getTypeName() + " is already a supported base type. You cannot re-add it.");
         }
@@ -95,14 +95,14 @@ public class BaseTypes {
         baseParseMethods.put(type, parseMethod);
     }
 
-    private static final Map<Class<?>, SerializeMethod<?>> baseSerializeMethods = new HashMap<>();
-    private static final Map<Class<?>, StyledSerializeMethod<?>> baseStyledSerializeMethods = new HashMap<>();
-    private static final Map<Class<?>, ParseMethod<?>> baseParseMethods = new HashMap<>();
+    private static final Map<Class<?>, SerializeMethod> baseSerializeMethods = new HashMap<>();
+    private static final Map<Class<?>, StyledSerializeMethod> baseStyledSerializeMethods = new HashMap<>();
+    private static final Map<Class<?>, ParseMethod> baseParseMethods = new HashMap<>();
 
 
 
-    private static final StyledSerializeMethod<String> serializeString = (value, style) -> {
-        String text = value;
+    private static final StyledSerializeMethod serializeString = (value, style) -> {
+        String text = (String) value;
         if (text == null || text.length() == 0) {
             return "";
         }
@@ -120,7 +120,7 @@ public class BaseTypes {
         return text;
     };
 
-    private static final ParseMethod<String> parseString = (text) -> isQuoted(text) ? unQuote(text) : text;
+    private static final ParseMethod parseString = (text) -> isQuoted(text) ? unQuote(text) : text;
 
     public static void setStringSpecialCase(Node node, String value, FileStyle style) {
         if (value != null && (value.contains("\n") || value.contains("\r"))) {
@@ -160,17 +160,18 @@ public class BaseTypes {
         return text.toString();
     }
 
-    private static final SerializeMethod<Integer> serializeInt = Object::toString;
+    private static final SerializeMethod serializeInt = Object::toString;
 
-    private static final SerializeMethod<Double> serializeDouble = (value) -> {
-        if (value.isInfinite()) {
-            if (value < 0) {
+    private static final SerializeMethod serializeDouble = (value) -> {
+        Double val = (double) value;
+        if (val.isInfinite()) {
+            if (val < 0) {
                 return "-infinity";
             } else {
                 return "infinity";
             }
         }
-        if (value.isNaN()) {
+        if (val.isNaN()) {
             return "nan";
         }
 
@@ -180,18 +181,18 @@ public class BaseTypes {
         format.setMaximumIntegerDigits(Integer.MAX_VALUE);
         format.setMaximumFractionDigits(Integer.MAX_VALUE);
         format.setRoundingMode(RoundingMode.HALF_UP);
-        return format.format((double) value);
+        return format.format((double)val);
     };
 
-    private static final SerializeMethod<Float> serializeFloat = (value) -> serializeDouble.serialize((double)value);
+    private static final SerializeMethod serializeFloat = (value) -> serializeDouble.serialize((double)value);
 
-    private static final ParseMethod<Long> parseLong = Long::parseLong;
-    private static final ParseMethod<Integer> parseInt = Integer::parseInt;
-    private static final ParseMethod<Short> parseShort = Short::parseShort;
-    private static final ParseMethod<Byte> parseByte = Byte::parseByte;
+    private static final ParseMethod parseLong = Long::parseLong;
+    private static final ParseMethod parseInt = Integer::parseInt;
+    private static final ParseMethod parseShort = Short::parseShort;
+    private static final ParseMethod parseByte = Byte::parseByte;
 
-    private static final ParseMethod<Float> parseFloat = (text) -> (float)parseFloatWithRationalSupport(text);
-    private static final ParseMethod<Double> parseDouble = BaseTypes::parseFloatWithRationalSupport;
+    private static final ParseMethod parseFloat = (text) -> (float)parseFloatWithRationalSupport(text);
+    private static final ParseMethod parseDouble = BaseTypes::parseFloatWithRationalSupport;
 
     private static double parseFloatWithRationalSupport(String text) {
         if (text.contains("/")) {
@@ -219,21 +220,21 @@ public class BaseTypes {
     private static final String[] trueStrings = new String[] {"true", "on", "yes", "y"};
     private static final String[] falseStrings = new String[] {"false", "off", "no", "n"};
 
-    private static final StyledSerializeMethod<Boolean> serializeBoolean =
+    private static final StyledSerializeMethod serializeBoolean =
             (value, style) -> (boolean)value ? trueStrings[style.boolStyle.ordinal()] : falseStrings[style.boolStyle.ordinal()];
 
-    private static final ParseMethod<Boolean> parseBoolean = (text) -> {
+    private static final ParseMethod parseBoolean = (text) -> {
         text = text.toLowerCase();
         if (Arrays.asList(trueStrings).contains(text)) return true;
         if (Arrays.asList(falseStrings).contains(text)) return false;
         throw new IllegalStateException("Cannot parse text as boolean: " + text);
     };
 
-    private static final SerializeMethod<Character> serializeChar = String::valueOf;
-    private static final ParseMethod<Character> parseChar = (value) -> value.charAt(0);
+    private static final SerializeMethod serializeChar = String::valueOf;
+    private static final ParseMethod parseChar = (value) -> value.charAt(0);
 
-    private static final SerializeMethod<Class<?>> serializeType = Class::getName;
-    private static final ParseMethod<Class<?>> parseType = (text) -> {
+    private static final SerializeMethod serializeType = (type) -> ((Class<?>)type).getName();
+    private static final ParseMethod parseType = (text) -> {
         try {
             return Class.forName(text);
         } catch (ClassNotFoundException e) {
@@ -262,11 +263,11 @@ public class BaseTypes {
         }
     }
 
-    private static final SerializeMethod<TemporalAccessor> serializeTemporal = (value) -> {
+    private static final SerializeMethod serializeTemporal = (value) -> {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US);
-        return formatter.format(value);
+        return formatter.format((TemporalAccessor)value);
     };
-    private static final ParseMethod<TemporalAccessor> parseTemporal = (text) -> {
+    private static final ParseMethod parseTemporal = (text) -> {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US);
         return formatter.parse(text);
     };
