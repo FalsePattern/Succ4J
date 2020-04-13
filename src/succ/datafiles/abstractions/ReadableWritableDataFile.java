@@ -7,22 +7,20 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class ReadableWritableDataFile extends ReadableDataFile {
 
     /**
      * Rules for how to format new data saved to this file.
      */
-    public AtomicReference<FileStyle> style = new AtomicReference<>(FileStyle.defaultStyle);
+    public FileStyle style = FileStyle.defaultStyle;
 
     /**
      * If true, the DataFile will automatically save changes to disk with each Get or Set.
      * If false, you must call SaveAllData() manually.
      * Be careful with this. You do not want to accidentally be writing to a user's disk at 1000MB/s for 3 hours.
      */
-    public AtomicBoolean autoSave = new AtomicBoolean(true);
+    public boolean autoSave = true;
 
     public ReadableWritableDataFile() {
         this(null);
@@ -40,15 +38,15 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
     /**
      * Reset the file to the default data provided when it was created.
      */
-    public synchronized void resetToDefaultData() {
-        setSavedText(defaultFileCache.get() != null ? defaultFileCache.get().getRawText() : "");
+    public void resetToDefaultData() {
+        setSavedText(defaultFileCache != null ? defaultFileCache.getRawText() : "");
         reloadAllData();
     }
 
     /**
      * Serializes the data in this object to the file on disk.
      */
-    public synchronized void saveAllData() {
+    public void saveAllData() {
         String SUCC = getRawText();
         String existingSUCC = getSavedText();
 
@@ -63,7 +61,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * @param defaultValue If the key does not exist in the file, this value is saved there and returned
      */
     @Override
-    public synchronized <T> T get(String key, T defaultValue) {
+    public <T> T get(String key, T defaultValue) {
         return super.get(defaultValue.getClass(), key, defaultValue);
     }
 
@@ -74,7 +72,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * @param defaultValue If the key does not exist in the file, this value is saved there and returned
      */
     @Override
-    public synchronized Object getNonGeneric(Class<?> type, String key, Object defaultValue) {
+    public Object getNonGeneric(Class<?> type, String key, Object defaultValue) {
         if (!keyExists(key)) {
             setNonGeneric(type, key, defaultValue);
             return defaultValue;
@@ -89,11 +87,11 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * @param key What the data is labeled as within the file
      * @param value The value to save
      */
-    public synchronized  <T> void set(String key, T value) {
+    public  <T> void set(String key, T value) {
         setNonGeneric(value.getClass(), key, value);
     }
 
-    public synchronized void setNonGeneric(Class<?> type, String key, Object value) {
+    public void setNonGeneric(Class<?> type, String key, Object value) {
         if (value != null && !type.equals(value.getClass())) {
             throw new ClassCastException("Value is not of type " + type.getName());
         }
@@ -113,7 +111,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
     }
 
     @Override
-    public synchronized Object getAtPathNonGeneric(Class<?> type, Object defaultValue, String... path) {
+    public Object getAtPathNonGeneric(Class<?> type, Object defaultValue, String... path) {
         if (!keyExistsAtPath(path)) {
             setAtPathNonGeneric(type, defaultValue, path);
             return defaultValue;
@@ -132,7 +130,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * @param value The value to save
      * @param path The nested path of the desired data location
      */
-    public synchronized <T> void setAtPath(T value, String... path) {
+    public <T> void setAtPath(T value, String... path) {
         setAtPathNonGeneric(value.getClass(), value, path);
     }
 
@@ -142,7 +140,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * @param value The value to save
      * @param path The nested path of the desired data location
      */
-    public synchronized void setAtPathNonGeneric(Class<?> type, Object value, String... path) {
+    public void setAtPathNonGeneric(Class<?> type, Object value, String... path) {
         if (value != null && !value.getClass().equals(type)) {
             throw new ClassCastException("Value is not of type " + type.getName());
         }
@@ -173,7 +171,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
     /**
      * Remove a top-level key and all its data from the file.
      */
-    public synchronized void deleteKey(String key) {
+    public void deleteKey(String key) {
         if (!keyExists(key)) {
             return;
         }
@@ -187,7 +185,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * Save this file as an object of type T, using that type's fields and properties as top-level keys.
      * @param saveThis The object to save
      */
-    public synchronized <T> void saveAsObject(T saveThis) {
+    public <T> void saveAsObject(T saveThis) {
         saveAsObjectNonGeneric(saveThis.getClass(), saveThis);
     }
 
@@ -196,9 +194,9 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * @param type What type to save this object as
      * @param saveThis The object to save
      */
-    public synchronized void saveAsObjectNonGeneric(Class<?> type, Object saveThis) {
-        boolean _autoSave = autoSave.get();
-        autoSave.set(false); // don't write to disk when we don't have to
+    public void saveAsObjectNonGeneric(Class<?> type, Object saveThis) {
+        boolean _autoSave = autoSave;
+        autoSave = false; // don't write to disk when we don't have to
 
         try {
             for(Field f: ComplexTypes.getValidFields(type)) {
@@ -212,10 +210,10 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         } finally {
-            autoSave.set(_autoSave);
+            autoSave = _autoSave;
         }
 
-        if (autoSave.get()) saveAllData();
+        if (autoSave) saveAllData();
     }
 
     /**
@@ -223,13 +221,13 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * @param keyType The class of the map keys (required due to type erasure), must be a Base Type
      * @param valueType The class of the map values (required due to type erasure)
      */
-    public synchronized <TKey, TValue> void saveAsMap(Class<TKey> keyType, Class<TValue> valueType, Map<TKey, TValue> map) {
+    public <TKey, TValue> void saveAsMap(Class<TKey> keyType, Class<TValue> valueType, Map<TKey, TValue> map) {
         if (!BaseTypes.isBaseType(keyType)) {
             throw new RuntimeException("When using saveAsMap, TKey must be a base type");
         }
 
-        boolean _autoSave = autoSave.get();
-        autoSave.set(false); // don't write to disk when we don't have to
+        boolean _autoSave = autoSave;
+        autoSave = false; // don't write to disk when we don't have to
 
         try {
             List<String> currentKeys = new ArrayList<>(map.size());
@@ -252,10 +250,10 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
                 }
             }
         } finally {
-            autoSave.set(_autoSave);
+            autoSave = _autoSave;
         }
 
-        if (autoSave.get()) {
+        if (autoSave) {
             saveAllData();
         }
     }

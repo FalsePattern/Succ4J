@@ -6,16 +6,10 @@ import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 
 public final class FalseUtil {
-    public static <T> T getDefaultValue(Class<T> type) {
-        try {
-            return type.getConstructor().newInstance();
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            return null; //TODO
-        }
-        //return (T)Array.get(Array.newInstance(type, 1), 0);
-    }
+
     static {
         switch (OS.type) {
             case WINDOWS:
@@ -86,4 +80,39 @@ public final class FalseUtil {
         }
         return null;
     }
+
+    public static String trimEnd(String s) {
+        char[] chars = s.toCharArray();
+        int lastIndex = chars.length - 1;
+        for (; lastIndex >= 0; lastIndex--) {
+            if (chars[lastIndex] > '\u0020') {
+                break;
+            }
+        }
+        if (lastIndex == 0) {
+            return "";
+        } else if (lastIndex < chars.length - 1) {
+            return s.substring(0, lastIndex + 1);
+        } else {
+            return s;
+        }
+    }
+
+    public static String trimStart(String s) {
+        char[] chars = s.toCharArray();
+        int firstIndex = 0;
+        for (; firstIndex < chars.length; firstIndex++) {
+            if (chars[firstIndex] > '\u0020') {
+                break;
+            }
+        }
+        if (firstIndex == 0) {
+            return s;
+        } else if (firstIndex < chars.length - 1) {
+            return s.substring(firstIndex);
+        } else {
+            return "";
+        }
+    }
+
 }

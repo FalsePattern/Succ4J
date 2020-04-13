@@ -1,10 +1,13 @@
 package succ.parsinglogic.types;
 
-import falsepattern.Out;
+import succ.Utilities;
+import succ.parsinglogic.nodes.MultiLineStringNode;
+import succ.parsinglogic.nodes.Node;
+import succ.parsinglogic.nodes.NodeChildrenType;
+import succ.style.EnumStyle;
 import succ.style.FileStyle;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -12,97 +15,94 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.*;
 
+import static succ.parsinglogic.ParsingLogicExtensions.*;
+
 /**
  * Manages SUCC's database of Base Types. https://github.com/JimmyCushnie/SUCC/wiki/Base-Types
  */
 public class BaseTypes {
-    public static synchronized <T> String serializeBaseType(T thing, FileStyle style) {
-        return serializeBaseType(thing, thing.getClass(), style);
-    }
 
     @SuppressWarnings("unchecked")
-    public static synchronized <T> String serializeBaseType(T thing, Class<? extends T> type, FileStyle style) {
+    public static <T> String serializeBaseType(T thing, Class<T> type, FileStyle style) {
         if (baseSerializeMethods.containsKey(type)) {
             return ((SerializeMethod<T>)baseSerializeMethods.get(type)).serialize(thing);
         }
         if (baseStyledSerializeMethods.containsKey(type)) {
             return ((StyledSerializeMethod<T>)baseStyledSerializeMethods.get(type)).serialize(thing, style);
         }
-        if (type.isEnum()) {
+        if (type != null && type.isEnum()) {
             return serializeEnum((Enum<?>)thing, style);
         }
 
-        throw new RuntimeException("Cannot serialize base type " + type.getName() + " - are you sure it is a base type?");
+        throw new RuntimeException("Cannot serialize base type " + (type != null ? type.getName() : "null") + " - are you sure it is a base type?");
     }
 
-    public static synchronized void setBaseTypeNode(Node node, Object thing, Class<?> type, FileStyle style) {
+    public static <T> void setBaseTypeNode(Node node, T thing, Class<T> type, FileStyle style) {
         node.capChildCount(0);
         node.childNodeType = NodeChildrenType.none;
-        node.value = serializeBaseType(thing, type, style);
+        node.setValue(serializeBaseType(thing, type, style));
     }
 
     /**
      * Turn some text into data, if that data is of a base type.
      */
     @SuppressWarnings("unchecked")
-    public static synchronized <T> T parseBaseType(String text, Class<T> type) {
+    public static <T> T parseBaseType(String text, Class<T> type) {
         try {
             {
-                Out<Method> method = new Out<>(Method.class);
                 if (baseParseMethods.containsKey(type)) {
-                    return (T)method.value.invoke(null, text);
+                    return ((ParseMethod<T>)baseParseMethods.get(type)).parse(text);
                 }
-                if (type.isEnum()) {
-                    return parseEnum(text, type);
+                if (type != null && type.isEnum()) {
+                    return (T)parseEnum(text, type);
                 }
             }
         } catch (Exception e) {
             throw new RuntimeException("Error parsing text as type " + type.getName() + ": " + text, e);
         }
 
-        throw new RuntimeException("Cannot parse base type " + type.getName() + " - are you sure it is a base type?");
+        throw new RuntimeException("Cannot parse base type " + (type != null ? type.getName() : "null") + " - are you sure it is a base type?");
     }
 
     /**
      * Returns true if the type is a base type.
      */
-    public static synchronized boolean isBaseType(Class<?> type) {
-        return type.isEnum()
+    public static <T> boolean isBaseType(Class<T> type) {
+        return (type != null && type.isEnum())
                 || baseSerializeMethods.containsKey(type)
                 || baseStyledSerializeMethods.containsKey(type);
     }
 
-    public interface CustomMethod<T>{}
-
     @FunctionalInterface
-    public interface SerializeMethod<T> extends CustomMethod<T> {
+    public interface SerializeMethod<T> {
         String serialize(T thing);
     }
     @FunctionalInterface
-    public interface ParseMethod<T> extends CustomMethod<T> {
+    public interface ParseMethod<T> {
         T parse(String text);
     }
     @FunctionalInterface
-    public interface StyledSerializeMethod<T> extends CustomMethod<T>{
+    public interface StyledSerializeMethod<T> {
         String serialize (T thing, FileStyle style);
     }
 
     public static <T> void addBaseType(Class<T> type, SerializeMethod<T> serializeMethod, ParseMethod<T> parseMethod) {
         if (isBaseType(type)) {
-            throw new RuntimeException("Type " + type.getName() + " is already a supported base type. You cannot re-add it.");
+            throw new RuntimeException("Type " + type.getTypeName() + " is already a supported base type. You cannot re-add it.");
         }
 
         baseSerializeMethods.put(type, serializeMethod);
         baseParseMethods.put(type, parseMethod);
     }
 
-    private static final BaseTypeConversionHashMap<SerializeMethod<?>> baseSerializeMethods = new BaseTypeConversionHashMap<>();
-    private static final BaseTypeConversionHashMap<StyledSerializeMethod<?>> baseStyledSerializeMethods = new BaseTypeConversionHashMap<>();
-    private static final BaseTypeConversionHashMap<ParseMethod<?>> baseParseMethods = new BaseTypeConversionHashMap<>();
+    private static final Map<Class<?>, SerializeMethod<?>> baseSerializeMethods = new HashMap<>();
+    private static final Map<Class<?>, StyledSerializeMethod<?>> baseStyledSerializeMethods = new HashMap<>();
+    private static final Map<Class<?>, ParseMethod<?>> baseParseMethods = new HashMap<>();
 
 
 
-    private static final StyledSerializeMethod<String> serializeString = (text, style) -> {
+    private static final StyledSerializeMethod<String> serializeString = (value, style) -> {
+        String text = value;
         if (text == null || text.length() == 0) {
             return "";
         }
@@ -112,34 +112,25 @@ public class BaseTypes {
         if (
                 style.alwaysQuoteStrings
                 || text.charAt(0) == ' ' || text.charAt(text.length() - 1) == ' '
-                || (text.startsWith("\"") && text.endsWith("\""))
-                || text.equals(Utilities.nullIndicator)
+                || isQuoted(text)
+                || text.equals(Utilities.getNullIndicator())
         ) {
-            text = "\"" + text + "\"";
+            text = quote(text);
         }
         return text;
     };
 
-    private static final ParseMethod<String> parseString = (text) -> {
-        if (
-                text.length() > 1
-                && text.charAt(0) == '"' && text.charAt(text.length() - 1) == '"'
-        ) {
-            text = text.substring(1, text.length() - 2);
-        }
-
-        return text;
-    };
+    private static final ParseMethod<String> parseString = (text) -> isQuoted(text) ? unQuote(text) : text;
 
     public static void setStringSpecialCase(Node node, String value, FileStyle style) {
         if (value != null && (value.contains("\n") || value.contains("\r"))) {
-            node.value = MultiLineStringNode.terminator;
-            String[] lines = value.replace("\r\n", "\n").replace("\r", "\n").split("\n");
+            node.setValue(MultiLineStringNode.terminator);
+            String[] lines = splitIntoLines(value);
 
             node.capChildCount(lines.length + 1);
             for (int i = 0; i < lines.length; i++) {
-                var newNode = node.getChildAddressedByStringLineNumber(i);
-                newNode.value = BaseTypes.serializeString.serialize(lines[i], style);
+                MultiLineStringNode newNode = node.getChildAddressedByStringLineNumber(i);
+                newNode.setValue(BaseTypes.serializeString.serialize(lines[i], style));
             }
 
             node.getChildAddressedByStringLineNumber(lines.length).makeTerminator();
@@ -147,29 +138,29 @@ public class BaseTypes {
     }
 
     public static String parseSpecialStringCase(Node node) {
-        String text = "";
+        StringBuilder text = new StringBuilder();
+        List<Node> childNodes = node.getChildNodes();
+        for (int i = 0; i < childNodes.size(); i++) {
+            MultiLineStringNode line = (MultiLineStringNode) childNodes.get(i);
 
-        for (int i = 0; i < node.childNodes.count; i++) {
-            MultiLineStringNode line = (MultiLineStringNode) node.childNodes[i];
-
-            if (i == node.childNodes.count - 1) {
-                if (line.isTerminator) {
+            if (i == childNodes.size() - 1) {
+                if (line.isTerminator()) {
                     break;
                 } else {
                     throw new IllegalStateException("Error parsing multi line string: the final child was not a terminator. Line so far was " + text);
                 }
             }
 
-            text += parseString.parse(line.value);
-            if (i != node.childNodes.count - 2) {
-                text += Utilities.newLine;
+            text.append(parseString.parse(line.getValue()));
+            if (i != childNodes.size() - 2) {
+                text.append(Utilities.getNewLine());
             }
         }
 
-        return text;
+        return text.toString();
     }
 
-    private static final SerializeMethod<?> serializeInt = Object::toString;
+    private static final SerializeMethod<Integer> serializeInt = Object::toString;
 
     private static final SerializeMethod<Double> serializeDouble = (value) -> {
         if (value.isInfinite()) {
@@ -189,7 +180,7 @@ public class BaseTypes {
         format.setMaximumIntegerDigits(Integer.MAX_VALUE);
         format.setMaximumFractionDigits(Integer.MAX_VALUE);
         format.setRoundingMode(RoundingMode.HALF_UP);
-        return format.format((double)value);
+        return format.format((double) value);
     };
 
     private static final SerializeMethod<Float> serializeFloat = (value) -> serializeDouble.serialize((double)value);
@@ -229,7 +220,7 @@ public class BaseTypes {
     private static final String[] falseStrings = new String[] {"false", "off", "no", "n"};
 
     private static final StyledSerializeMethod<Boolean> serializeBoolean =
-            (value, style) -> value ? trueStrings[style.boolStyle.ordinal()] : falseStrings[style.boolStyle.ordinal()];
+            (value, style) -> (boolean)value ? trueStrings[style.boolStyle.ordinal()] : falseStrings[style.boolStyle.ordinal()];
 
     private static final ParseMethod<Boolean> parseBoolean = (text) -> {
         text = text.toLowerCase();
@@ -241,26 +232,34 @@ public class BaseTypes {
     private static final SerializeMethod<Character> serializeChar = String::valueOf;
     private static final ParseMethod<Character> parseChar = (value) -> value.charAt(0);
 
-    private static final SerializeMethod<Class<?>> serializeClass = Class::getName;
-    private static final ParseMethod<Class<?>> parseClass = (text) -> {
+    private static final SerializeMethod<Class<?>> serializeType = Class::getName;
+    private static final ParseMethod<Class<?>> parseType = (text) -> {
         try {
             return Class.forName(text);
         } catch (ClassNotFoundException e) {
-            throw new IllegalStateException("Cannot parse text as java.lang.Class: " + text, e);
+            throw new RuntimeException("Class not found: " + text, e);
         }
     };
 
     private static <T extends Enum<?>> String serializeEnum(T value, FileStyle style) {
-        switch (style.enumStyle) {
-            default:
-                return value.name();
-            case number:
-                return Integer.toString(value.ordinal());
+        if (style.enumStyle == EnumStyle.number) {
+            return Integer.toString(value.ordinal());
+        } else {
+            return value.name();
         }
     }
 
-    private static <T extends Enum<T>> T parseEnum(String text, Class<T> type) {
-        return Enum.valueOf(type, text);
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Object parseEnum(String text, Type type) {
+        try {
+            if (type instanceof Class<?> && ((Class<?>) type).isEnum()) {
+                return Enum.valueOf((Class<Enum>) type, text);
+            } else {
+                throw new IllegalArgumentException("Type " + type.getTypeName() + " is not an enum.");
+            }
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Enum " + type.getTypeName() + " has not value with name " + text);
+        }
     }
 
     private static final SerializeMethod<TemporalAccessor> serializeTemporal = (value) -> {
@@ -294,7 +293,7 @@ public class BaseTypes {
         // Misc
         baseSerializeMethods.put(char.class, serializeChar);
         baseSerializeMethods.put(Character.class, serializeChar);
-        baseSerializeMethods.put(Class.class, serializeClass);
+        baseSerializeMethods.put(Class.class, serializeType);
         baseSerializeMethods.put(Date.class, serializeTemporal);
 
         baseStyledSerializeMethods.put(String.class, serializeString);
@@ -324,7 +323,7 @@ public class BaseTypes {
         baseParseMethods.put(char.class, parseChar);
         baseParseMethods.put(Boolean.class, parseBoolean);
         baseParseMethods.put(Character.class, parseChar);
-        baseParseMethods.put(Class.class, parseClass);
+        baseParseMethods.put(Class.class, parseType);
 
         baseParseMethods.put(Date.class, parseTemporal);
     }

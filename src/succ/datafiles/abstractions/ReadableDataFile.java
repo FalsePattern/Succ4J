@@ -1,18 +1,19 @@
 package succ.datafiles.abstractions;
 
 import falsepattern.Out;
-import falsepattern.FalseUtil;
-import javafx.scene.shape.Line; //TODO replace
+import succ.parsinglogic.ParsingLogicExtensions;
+import succ.parsinglogic.nodes.KeyNode;
+import succ.parsinglogic.nodes.Line;
+import succ.parsinglogic.types.BaseTypes;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A SUCC file that can be read from
  */
 public abstract class ReadableDataFile {
-    private AtomicReference<List<Line>> topLevelLines = new AtomicReference<>(new ArrayList<>()); // {get; private set;}
-    private AtomicReference<Map<String, KeyNode>> topLevelNodes = new AtomicReference<>(new HashMap<>()); // {get; private set;}
+    private List<Line> topLevelLines = new ArrayList<>(); // {get; private set;}
+    private Map<String, KeyNode> topLevelNodes = new HashMap<>(); // {get; private set;}
 
     /**
      * A quasi-unique string, to be used when you need to sort a bunch of DataFiles.
@@ -20,7 +21,7 @@ public abstract class ReadableDataFile {
     public abstract String getIdentifier();
 
     // When a default value is not supplied, we search for it in this.
-    protected final AtomicReference<MemoryReadOnlyDataFile> defaultFileCache = new AtomicReference<>(); // {get; }
+    protected final MemoryReadOnlyDataFile defaultFileCache;
 
     public ReadableDataFile() {
         this(null);
@@ -28,9 +29,9 @@ public abstract class ReadableDataFile {
 
     public ReadableDataFile(String defaultFileText) {
         if (defaultFileText == null) {
-            defaultFileCache.set(null);
+            defaultFileCache = null;
         } else {
-            defaultFileCache.set(new MemoryReadOnlyDataFile(defaultFileText, null));
+            defaultFileCache = new MemoryReadOnlyDataFile(defaultFileText, null);
         }
     }
 
@@ -39,13 +40,13 @@ public abstract class ReadableDataFile {
      */
     protected abstract String getSavedText();
 
-    public synchronized void reloadAllData() {
+    public void reloadAllData() {
         try {
             String succ = getSavedText();
             //TODO
             var data = DataConverter.DataStructureFromSUCC(succ, this);
-            topLevelLines.set(data.topLevelLines);
-            topLevelNodes.set(data.topLevelNodes);
+            topLevelLines = data.topLevelLines;
+            topLevelNodes = data.topLevelNodes;
         } catch (Exception e) {
             throw new RuntimeException("Error parsing data from file: ", e);
         }
@@ -54,24 +55,24 @@ public abstract class ReadableDataFile {
     /**
      * Gets the data as it appears in file.
      */
-    public synchronized String getRawText() {
+    public String getRawText() {
         return DataConverter.SUCCFromDataStructure(topLevelLines);
     }
 
     /**
      * Gets the data as it appears in file, as an array of strings (one for each line).
      */
-    public synchronized String[] getRawLines() {
+    public String[] getRawLines() {
         return getRawText().split("\n"); //TODO universal splitting
     }
 
     /**
      * Returns all top level keys in the file, in the order they appear in the file.
      */
-    public synchronized String[] getTopLevelKeysInOrder() {
-        String[] keys = new String[topLevelNodes.get().size()];
+    public String[] getTopLevelKeysInOrder() {
+        String[] keys = new String[topLevelNodes.size()];
         int count = 0;
-        for (Line line : topLevelLines.get()) {
+        for (Line line : topLevelLines) {
             if (line instanceof KeyNode) {
                 keys[count] = ((KeyNode) line).key; //TODO
                 count++;
@@ -83,21 +84,21 @@ public abstract class ReadableDataFile {
     /**
      * This is faster than GetTopLevelKeysInOrder() but the keys may not be in the order they appear in the file.
      */
-    public synchronized Set<String> topLevelKeys() {
-        return topLevelNodes.get().keySet();
+    public Set<String> topLevelKeys() {
+        return topLevelNodes.keySet();
     }
 
     /**
      * Whether a top-level key exists in the file.
      */
-    public synchronized boolean keyExists(String key) {
-        return topLevelNodes.get().containsKey(key);
+    public boolean keyExists(String key) {
+        return topLevelNodes.containsKey(key);
     }
 
     /**
      * Whether a key exists in the file at a nested path
      */
-    public synchronized boolean keyExistsAtPath(String... path) {
+    public boolean keyExistsAtPath(String... path) {
         if (path.length < 1) {
             throw new IllegalArgumentException("Path must have a length greater than 0");
         }
@@ -106,7 +107,7 @@ public abstract class ReadableDataFile {
             return false;
         }
 
-        KeyNode topNode = topLevelNodes.get().get(path[0]);
+        KeyNode topNode = topLevelNodes.get(path[0]);
         for (int i = 1; i < path.length; i++) {
             if (topNode.containsChildNode(path[i])) {
                 topNode = topNode.getChildAddressedByName(path[i]);
@@ -123,7 +124,7 @@ public abstract class ReadableDataFile {
      * @param type The type to get the data as (required due to type erasure)
      * @param key What the data is labeled as within the file
      */
-    public synchronized <T> T get(Class<T> type, String key) {
+    public <T> T get(Class<T> type, String key) {
         return (T) getNonGeneric(type, key);
     }
 
@@ -133,9 +134,9 @@ public abstract class ReadableDataFile {
      * @param type The type to get the data as
      * @param key What the data is labeled as within the file
      */
-    public synchronized Object getNonGeneric(Class<?> type, String key) {
-        Object defaultDefaultValue = FalseUtil.getDefaultValue(type);
-        Object defaultValue = defaultFileCache.get() != null ? defaultFileCache.get().getNonGeneric(type, key, defaultDefaultValue) : defaultDefaultValue;
+    public Object getNonGeneric(Class<?> type, String key) {
+        Object defaultDefaultValue = ParsingLogicExtensions.getDefaultValue(type);
+        Object defaultValue = defaultFileCache != null ? defaultFileCache.getNonGeneric(type, key, defaultDefaultValue) : defaultDefaultValue;
         return this.getNonGeneric(type, key, defaultValue);
     }
 
@@ -146,11 +147,10 @@ public abstract class ReadableDataFile {
 
     /**
      * Get some data from the file, or return a default value if the data does not exist.
-     * @param type The type to get the data as (required due to type erasure)
      * @param key What the data is labeled as within the file
      * @param defaultValue If the key does not exist in the file, this value is returned instead.
      */
-    public synchronized <T> T get(String key, T defaultValue) {
+    public <T> T get(String key, T defaultValue) {
         return (T) getNonGeneric(defaultValue.getClass(), key, defaultValue);
     }
 
@@ -160,12 +160,12 @@ public abstract class ReadableDataFile {
      * @param key What the data is labeled as within the file
      * @param defaultValue If the key does not exist in the file, this value is returned instead
      */
-    public synchronized Object getNonGeneric(Class<?> type, String key, Object defaultValue) {
+    public Object getNonGeneric(Class<?> type, String key, Object defaultValue) {
         if (!keyExists(key)) {
             return defaultValue;
         }
 
-        KeyNode node = topLevelNodes.get().get(key);
+        KeyNode node = topLevelNodes.get(key);
         return NodeManager.getNodeData(node, type);
     }
 
@@ -174,7 +174,7 @@ public abstract class ReadableDataFile {
      * @param type The type to get the data as (required due to type erasure)
      * @param path The nested path of the desired data
      */
-    public synchronized <T> T getAtPath(Class<T> type, String... path) {
+    public <T> T getAtPath(Class<T> type, String... path) {
         return (T) getAtPathNonGeneric(type, path);
     }
 
@@ -183,9 +183,9 @@ public abstract class ReadableDataFile {
      * @param type The type to get the data as
      * @param path The nested path of the desired data
      */
-    public synchronized Object getAtPathNonGeneric(Class<?> type, String... path) {
-        Object defaultDefaultValue = FalseUtil.getDefaultValue(type);
-        Object defaultValue = defaultFileCache.get() != null ? defaultFileCache.get().getAtPathNonGeneric(type, defaultDefaultValue, path) : defaultDefaultValue;
+    public Object getAtPathNonGeneric(Class<?> type, String... path) {
+        Object defaultDefaultValue = ParsingLogicExtensions.getDefaultValue(type);
+        Object defaultValue = defaultFileCache != null ? defaultFileCache.getAtPathNonGeneric(type, defaultDefaultValue, path) : defaultDefaultValue;
 
         return this.getAtPathNonGeneric(type, defaultValue, path);
     }
@@ -195,7 +195,7 @@ public abstract class ReadableDataFile {
      * @param defaultValue If the key does not exist in the file, this value is returned instead.
      * @param path The nested path of the desired data
      */
-    public synchronized <T> T getAtPath(T defaultValue, String... path) {
+    public <T> T getAtPath(T defaultValue, String... path) {
         return (T) getAtPathNonGeneric(defaultValue.getClass(), defaultValue, path);
     }
 
@@ -205,7 +205,7 @@ public abstract class ReadableDataFile {
      * @param defaultValue If the key does not exist in the file, this value is returned instead.
      * @param path The nested path of the desired data
      */
-    public synchronized Object getAtPathNonGeneric(Class<?> type, Object defaultValue, String... path) {
+    public Object getAtPathNonGeneric(Class<?> type, Object defaultValue, String... path) {
         if (defaultValue != null && ! type.equals(defaultValue.getClass())) {
             throw new RuntimeException("defaultValue is not of type " + type.getName());
         }
@@ -214,7 +214,7 @@ public abstract class ReadableDataFile {
             return defaultValue;
         }
 
-        KeyNode topNode = topLevelNodes.get().get(path[0]);
+        KeyNode topNode = topLevelNodes.get(path[0]);
         for (int i = 1; i < path.length; i++) {
             topNode = topNode.getChildAddressedByName(path[i]);
         }
@@ -222,7 +222,7 @@ public abstract class ReadableDataFile {
         return NodeManager.GetNodeData(topNode, type);
     }
 
-    public synchronized <T> boolean tryGet(String key, Out<T> value) {
+    public <T> boolean tryGet(String key, Out<T> value) {
         if (!keyExists(key)) {
             //value = default;
             return false;
@@ -237,7 +237,7 @@ public abstract class ReadableDataFile {
      * @param keyType The class of the map keys (required due to type erasure), must be a Base Type
      * @param valueType The class of the map values (required due to type erasure)
      */
-    public synchronized <TKey, TValue> Map<TKey, TValue> getAsMap(Class<TKey> keyType, Class<TValue> valueType) {
+    public <TKey, TValue> Map<TKey, TValue> getAsMap(Class<TKey> keyType, Class<TValue> valueType) {
         if (!BaseTypes.isBaseType(keyType)) {
             throw new RuntimeException("When using getAsMap, TKey must be a base type");
         }
@@ -257,19 +257,19 @@ public abstract class ReadableDataFile {
 
 
     //getters and setters
-    private synchronized void setTopLevelLines(List<Line> topLevelLines) {
-        this.topLevelLines.set(topLevelLines);
+    private void setTopLevelLines(List<Line> topLevelLines) {
+        this.topLevelLines = topLevelLines;
     }
 
-    public synchronized List<Line> getTopLevelLines() {
-        return topLevelLines.get();
+    public List<Line> getTopLevelLines() {
+        return topLevelLines;
     }
 
-    private synchronized void setTopLevelNodes(Map<String, KeyNode> topLevelNodes) {
-        this.topLevelNodes.set(topLevelNodes);
+    private void setTopLevelNodes(Map<String, KeyNode> topLevelNodes) {
+        this.topLevelNodes = topLevelNodes;
     }
 
-    public synchronized Map<String, KeyNode> getTopLevelNodes() {
+    public Map<String, KeyNode> getTopLevelNodes() {
         return topLevelNodes;
     }
 }
