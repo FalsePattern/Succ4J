@@ -30,8 +30,8 @@ public class ComplexTypes {
         }
     }
 
-    public static Object retrieveComplexType(Node node, Class<?> type) {
-        Object returnThis;
+    public static <T> T retrieveComplexType(Node node, Class<T> type) {
+        T returnThis;
         try {
             returnThis = type.getConstructor().newInstance();
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {

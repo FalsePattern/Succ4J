@@ -12,7 +12,7 @@ public class MultiLineStringNode extends Node {
 
     public MultiLineStringNode(int indentation, ReadableWritableDataFile file) {
         super(indentation, file);
-        this.unappliedStyle = false; // currently, no styles apply to MultiLineStringNodes
+        this.unAppliedStyle = false; // currently, no styles apply to MultiLineStringNodes
     }
 
     @Override

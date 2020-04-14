@@ -50,9 +50,9 @@ public class KeyNode extends Node {
 
     @Override
     public void setValue(String value) {
-        if (this.unappliedStyle) {
+        if (this.unAppliedStyle) {
             setDataText(getKey() + addSpaces(":", getStyle().getSpacesAfterColon()) + value);
-            this.unappliedStyle = false;
+            this.unAppliedStyle = false;
             return;
         }
 

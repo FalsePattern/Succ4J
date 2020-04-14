@@ -22,7 +22,6 @@ import static succ.parsinglogic.ParsingLogicExtensions.*;
  */
 public class BaseTypes {
 
-    @SuppressWarnings("unchecked")
     public static String serializeBaseType(Object thing, Class<?> type, FileStyle style) {
         if (baseSerializeMethods.containsKey(type)) {
             return baseSerializeMethods.get(type).serialize(thing);
@@ -34,7 +33,7 @@ public class BaseTypes {
             return serializeEnum((Enum<?>)thing, style);
         }
 
-        throw new RuntimeException("Cannot serialize base type " + (type != null ? type.getName() : "null") + " - are you sure it is a base type?");
+        throw new ClassCastException("Cannot serialize base type " + (type != null ? type.getName() : "null") + " - are you sure it is a base type?");
     }
 
     public static <T> void setBaseTypeNode(Node node, Object thing, Class<?> type, FileStyle style) {
@@ -46,7 +45,6 @@ public class BaseTypes {
     /**
      * Turn some text into data, if that data is of a base type.
      */
-    @SuppressWarnings("unchecked")
     public static <T> T parseBaseType(String text, Class<T> type) {
         try {
             {

@@ -85,7 +85,7 @@ public class FileStyle {
 
     private int tryValue(int value, int minimum, String fieldName) {
         if (value < minimum) {
-            throw new IndexOutOfBoundsException(fieldName + "cannot be less than " + minimum + ". You treid to set it to " + value);
+            throw new IndexOutOfBoundsException(fieldName + "cannot be less than " + minimum + ". You tried to set it to " + value);
         }
 
         return value;

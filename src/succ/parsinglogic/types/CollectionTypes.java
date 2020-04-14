@@ -10,19 +10,18 @@ import succ.style.FileStyle;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Type;
 import java.util.*;
 
 public class CollectionTypes {
-    public static <T, K> boolean trySetCollection(Node node, T data, Class<T> collectionType, Class<K> elementType, FileStyle style) {
+    public static boolean trySetCollection(Node node, Object data, Class<?> collectionType, Class<?> elementType, FileStyle style) {
         if (collectionType == null) {
             return false;
         } else if (collectionType.isArray()) {
             setArrayNode(node, data, collectionType, style);
         } else if (List.class.isAssignableFrom(collectionType)) {
-            setListNode(node, (List<K>) data, elementType, style);
+            setListNode(node, (List<?>) data, elementType, style);
         } else if (Set.class.isAssignableFrom(collectionType)) {
-            setSetNode(node, (Set<K>) data, elementType, style);
+            setSetNode(node, (Set<?>) data, elementType, style);
         } else if (Map.class.isAssignableFrom(collectionType)) {
             setMapNode(node, (Map<?, ?>)data, Object.class, elementType, style, false);
         } else if (node.childNodeType == NodeChildrenType.list) {
@@ -34,10 +33,11 @@ public class CollectionTypes {
         return true;
     }
 
-    public static <T> Object tryGetCollection(Node node, Class<?> collectionType, Class<T> elementType) {
+    @SuppressWarnings("unchecked")
+    public static Object tryGetCollection(Node node, Class<?> collectionType, Class<?> elementType) {
         Object data = null;
         if (collectionType.isArray()) {
-            data = retrieveArray(node, (Class<?>)collectionType);
+            data = retrieveArray(node, collectionType);
         } else if (List.class.isAssignableFrom(collectionType)) {
             data = retrieveList(node, (Class<List<?>>) collectionType, elementType);
         } else if (Set.class.isAssignableFrom(collectionType)) {
@@ -51,7 +51,7 @@ public class CollectionTypes {
         return data;
     }
 
-    private static <T> void setArrayNode(Node node, T array, Class<T> arrayType, FileStyle style) {
+    private static void setArrayNode(Node node, Object array, Class<?> arrayType, FileStyle style) {
         Class<?> elementType = arrayType.getComponentType();
 
         Object[] boi = getArray(array, arrayType);
@@ -64,8 +64,7 @@ public class CollectionTypes {
 
     }
 
-    @SuppressWarnings("unchecked")
-    private static <T> T retrieveArray(Node node, Class<T> arrayType) {
+    private static Object[] retrieveArray(Node node, Class<?> arrayType) {
         Class<?> elementType = arrayType.getComponentType();
         Object[] array = (Object[])Array.newInstance(elementType, node.getChildNodes().size());
 
@@ -75,10 +74,10 @@ public class CollectionTypes {
             array[i] = element;
         }
 
-        return (T)array;
+        return array;
     }
 
-    private static <T> void setListNode(Node node, List<T> list, Class<T> elementType, FileStyle style) {
+    private static void setListNode(Node node, List<?> list, Class<?> elementType, FileStyle style) {
         int size = list.size();
         node.capChildCount(size);
         for (int i = 0; i < size; i++) {
@@ -86,8 +85,9 @@ public class CollectionTypes {
         }
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static List<?> retrieveList(Node node, Class<List<?>> listType, Class<?> elementType) {
-        List<?> resultList = null;
+        List<?> resultList;
         try {
             resultList = listType.getConstructor().newInstance();
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
@@ -112,8 +112,9 @@ public class CollectionTypes {
         }
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static Set<?> retrieveSet(Node node, Class<Set<?>> setType, Class<?> elementType) {
-        Set<?> resultSet = null;
+        Set<?> resultSet;
         try {
             resultSet = setType.getConstructor().newInstance();
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
@@ -168,9 +169,10 @@ public class CollectionTypes {
         }
     }
 
-    private static Map<?, ?> retrieveMap(Node node,  Class<Map<?, ?>> mapType, Class<?> keyType, Class<?> valueType) {
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Map<?, ?> retrieveMap(Node node, Class<Map<?, ?>> mapType, Class<?> keyType, Class<?> valueType) {
         boolean keyIsBase = BaseTypes.isBaseType(keyType);
-        Map<?, ?> map;
+        Map map;
         try {
             map = mapType.getConstructor(int.class).newInstance(node.getChildNodes().size());
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
@@ -181,12 +183,16 @@ public class CollectionTypes {
                 String childKey = ((KeyNode) child).getKey();
                 Object key = BaseTypes.parseBaseType(childKey, keyType);
                 Object value = NodeManager.getNodeData(child, valueType);
+                map.put(key, value);
             }
         } else {
-            /*Set<Map.Entry<K, V>> array = NodeManager.getNodeData<Set<Entry<K, V>>>(node);
-            for (Map.Entry<K, V> kvp: array) {
-                map.put(kvp.getKey(), kvp.getValue());
-            }*/
+            Set<Map.Entry<?, ?>> array = new HashSet<>();
+            array = (Set<Map.Entry<?, ?>>)NodeManager.getNodeData(node, array.getClass());
+            if (array != null) {
+                for (Map.Entry<?, ?> kvp : array) {
+                    map.put(kvp.getKey(), kvp.getValue());
+                }
+            }
         }
         return map;
     }
@@ -196,7 +202,7 @@ public class CollectionTypes {
             int[].class, float[].class, double[].class, boolean[].class,
             byte[].class, short[].class, long[].class, char[].class };
 
-    private static <T> Object[] getArray(T array, Class<T> arrayType){
+    private static Object[] getArray(Object array, Class<?> arrayType){
         Object[] outputArray = null;
 
         for(Class<?> arrClass : ARRAY_PRIMITIVE_TYPES){

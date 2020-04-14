@@ -56,7 +56,7 @@ public class DataConverter {
         Map<String, KeyNode> topLevelNodes = new HashMap<>();
 
         Stack<Node> nestingNodeStack = new Stack<>(); // The top of the stack is the node that new nodes should be children of
-        boolean doingMuliLineString = false;
+        boolean doingMultiLineString = false;
 
         DataFile file = null; // This will be null if fileRef is a ReadOnlyDataFile
         try {
@@ -70,7 +70,7 @@ public class DataConverter {
                 throw new IllegalArgumentException("A SUCC file cannot contain tabs. Please use spaces instead.");
             }
 
-            if (doingMuliLineString) {
+            if (doingMultiLineString) {
                 if (nestingNodeStack.peek().childNodeType != NodeChildrenType.multiLineString) {
                     throw new RuntimeException("We were supposed to be doing a multi-line string but the top of the node stack isn't a multi-line string node!");
                 }
@@ -80,7 +80,7 @@ public class DataConverter {
                 nestingNodeStack.peek().addChild(newNode);
 
                 if (newNode.isTerminator()) {
-                    doingMuliLineString = false;
+                    doingMultiLineString = false;
                     nestingNodeStack.pop();
                 }
 
@@ -131,7 +131,7 @@ public class DataConverter {
                 } else if (node.getValue().equals(MultiLineStringNode.terminator)) { // if this is the start of a multi line string
                     nestingNodeStack.push(node);
                     node.childNodeType = NodeChildrenType.multiLineString;
-                    doingMuliLineString = true;
+                    doingMultiLineString = true;
                 }
             } else { // Line has no data
                 Line noDataLine = new Line(line);

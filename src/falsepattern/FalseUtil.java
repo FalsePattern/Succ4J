@@ -2,11 +2,7 @@ package falsepattern;
 
 import falsepattern.os.OS;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 
 public final class FalseUtil {
 

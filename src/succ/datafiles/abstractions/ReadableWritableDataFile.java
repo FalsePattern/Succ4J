@@ -1,6 +1,12 @@
 package succ.datafiles.abstractions;
 
 import falsepattern.Out;
+import succ.Utilities;
+import succ.parsinglogic.NodeManager;
+import succ.parsinglogic.nodes.KeyNode;
+import succ.parsinglogic.nodes.Node;
+import succ.parsinglogic.types.BaseTypes;
+import succ.parsinglogic.types.ComplexTypes;
 import succ.style.FileStyle;
 
 import java.lang.reflect.Field;
@@ -62,7 +68,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      */
     @Override
     public <T> T get(String key, T defaultValue) {
-        return super.get(defaultValue.getClass(), key, defaultValue);
+        return super.get(key, defaultValue);
     }
 
     /**
@@ -218,21 +224,21 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
 
     /**
      * Save this file as a map, using the map's keys as top-level keys in the file.
-     * @param keyType The class of the map keys (required due to type erasure), must be a Base Type
-     * @param valueType The class of the map values (required due to type erasure)
      */
-    public <TKey, TValue> void saveAsMap(Class<TKey> keyType, Class<TValue> valueType, Map<TKey, TValue> map) {
-        if (!BaseTypes.isBaseType(keyType)) {
-            throw new RuntimeException("When using saveAsMap, TKey must be a base type");
-        }
+    public <TKey, TValue> void saveAsMap(Map<TKey, TValue> map) {
 
         boolean _autoSave = autoSave;
         autoSave = false; // don't write to disk when we don't have to
 
         try {
             List<String> currentKeys = new ArrayList<>(map.size());
+            boolean first = true;
             for (TKey key: map.keySet()) {
-                String keyText = BaseTypes.serializeBaseType(key, style);
+                if (first && !BaseTypes.isBaseType(key.getClass())) {
+                    throw new RuntimeException("When using saveAsMap, TKey must be a base type");
+                }
+                first = false;
+                String keyText = BaseTypes.serializeBaseType(key, key.getClass(), style);
                 {
                     Out<String> whyNot = new Out<>(String.class);
                     if (!Utilities.isValidKey(keyText, whyNot)) {

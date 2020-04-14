@@ -18,6 +18,7 @@ public class NodeManager {
         setNodeData(node, data, data.getClass(), style);
     }
 
+    @SuppressWarnings("UnnecessaryReturnStatement")
     public static void setNodeData(Node node, Object data, Class<?> type, FileStyle style) {
         if (data == null) {
             node.clearChildren();
@@ -27,7 +28,7 @@ public class NodeManager {
             node.setValue("");
         }
 
-        // If we try to save a single-line string and find it is currently saved as a multi-line string, we do NOT remove the mutli-line formatting.
+        // If we try to save a single-line string and find it is currently saved as a multi-line string, we do NOT remove the multi-line formatting.
         // The reason for this is that there might be comments on the """s, and we want to preserve those comments.
         // Also, this happens in only two cases:
         //     1. A string that is usually single-line is manually switched to multi-line formatting by a user
@@ -40,7 +41,7 @@ public class NodeManager {
             BaseTypes.setStringSpecialCase(node, dataAsString, style);
         } else if (BaseTypes.isBaseType(type)) {
             BaseTypes.setBaseTypeNode(node, data, type, style);
-        } else if (CollectionTypes.trySetCollection(node, data, (Class)type, Object.class, style)) {
+        } else if (CollectionTypes.trySetCollection(node, data, type, Object.class, style)) {
             return;
         } else {
             ComplexTypes.setComplexNode(node, data, type, style);
@@ -63,6 +64,18 @@ public class NodeManager {
 
             T collection = type.cast(CollectionTypes.tryGetCollection(node, type, Object.class));
 
+            if (collection != null) {
+                return collection;
+            }
+
+            String value = node.getValue();
+            if (!(value == null || value.equals(""))) {
+               throw new RuntimeException("Tried to get node data from shortcut, however shortcuts are not yet implemented in SUCC4J");
+            }
+
+            return ComplexTypes.retrieveComplexType(node, type);
+        } catch (Exception e) {
+            throw new RuntimeException("Error getting data of type " + type.getName() + " from node: ", e);
         }
     }
 }

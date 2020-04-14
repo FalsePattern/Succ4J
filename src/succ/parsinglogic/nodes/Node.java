@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static falsepattern.FalseUtil.trimEnd;
 import static succ.parsinglogic.ParsingLogicExtensions.isWhitespace;
@@ -50,10 +49,10 @@ public abstract class Node extends Line {
     public Node(int indentation, ReadableWritableDataFile file) {
         this.setIndentationLevel(indentation);
         this.file = file;
-        this.unappliedStyle = true;
+        this.unAppliedStyle = true;
     }
 
-    protected boolean unappliedStyle = false;
+    protected boolean unAppliedStyle = false;
 
     public KeyNode getChildAddressedByName(String name) {
         ensureProperChildType(NodeChildrenType.key);
@@ -99,7 +98,7 @@ public abstract class Node extends Line {
     }
 
     private int getProperChildIndentation() {
-        int indentation = 0;
+        int indentation;
         if (this.childNodes.size() > 0) {
             indentation = this.childNodes.get(0).getIndentationLevel(); // if we already have a child, match new indentation level to that child
         } else {

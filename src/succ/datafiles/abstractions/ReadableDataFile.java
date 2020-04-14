@@ -1,6 +1,10 @@
 package succ.datafiles.abstractions;
 
 import falsepattern.Out;
+import falsepattern.Pair;
+import succ.datafiles.memoryfiles.MemoryReadOnlyDataFile;
+import succ.parsinglogic.DataConverter;
+import succ.parsinglogic.NodeManager;
 import succ.parsinglogic.ParsingLogicExtensions;
 import succ.parsinglogic.nodes.KeyNode;
 import succ.parsinglogic.nodes.Line;
@@ -44,9 +48,9 @@ public abstract class ReadableDataFile {
         try {
             String succ = getSavedText();
             //TODO
-            var data = DataConverter.DataStructureFromSUCC(succ, this);
-            topLevelLines = data.topLevelLines;
-            topLevelNodes = data.topLevelNodes;
+            Pair<List<Line>, Map<String, KeyNode>> data = DataConverter.dataStructureFromSUCC(succ, this);
+            topLevelLines = data.A;
+            topLevelNodes = data.B;
         } catch (Exception e) {
             throw new RuntimeException("Error parsing data from file: ", e);
         }
@@ -56,14 +60,14 @@ public abstract class ReadableDataFile {
      * Gets the data as it appears in file.
      */
     public String getRawText() {
-        return DataConverter.SUCCFromDataStructure(topLevelLines);
+        return DataConverter.succFromDataStructure(topLevelLines);
     }
 
     /**
      * Gets the data as it appears in file, as an array of strings (one for each line).
      */
     public String[] getRawLines() {
-        return getRawText().split("\n"); //TODO universal splitting
+        return ParsingLogicExtensions.splitIntoLines(getRawText());
     }
 
     /**
@@ -74,7 +78,7 @@ public abstract class ReadableDataFile {
         int count = 0;
         for (Line line : topLevelLines) {
             if (line instanceof KeyNode) {
-                keys[count] = ((KeyNode) line).key; //TODO
+                keys[count] = ((KeyNode) line).getKey();
                 count++;
             }
         }
@@ -124,6 +128,7 @@ public abstract class ReadableDataFile {
      * @param type The type to get the data as (required due to type erasure)
      * @param key What the data is labeled as within the file
      */
+    @SuppressWarnings("unchecked")
     public <T> T get(Class<T> type, String key) {
         return (T) getNonGeneric(type, key);
     }
@@ -150,6 +155,7 @@ public abstract class ReadableDataFile {
      * @param key What the data is labeled as within the file
      * @param defaultValue If the key does not exist in the file, this value is returned instead.
      */
+    @SuppressWarnings("unchecked")
     public <T> T get(String key, T defaultValue) {
         return (T) getNonGeneric(defaultValue.getClass(), key, defaultValue);
     }
@@ -174,6 +180,7 @@ public abstract class ReadableDataFile {
      * @param type The type to get the data as (required due to type erasure)
      * @param path The nested path of the desired data
      */
+    @SuppressWarnings("unchecked")
     public <T> T getAtPath(Class<T> type, String... path) {
         return (T) getAtPathNonGeneric(type, path);
     }
@@ -195,6 +202,7 @@ public abstract class ReadableDataFile {
      * @param defaultValue If the key does not exist in the file, this value is returned instead.
      * @param path The nested path of the desired data
      */
+    @SuppressWarnings("unchecked")
     public <T> T getAtPath(T defaultValue, String... path) {
         return (T) getAtPathNonGeneric(defaultValue.getClass(), defaultValue, path);
     }
@@ -219,7 +227,7 @@ public abstract class ReadableDataFile {
             topNode = topNode.getChildAddressedByName(path[i]);
         }
 
-        return NodeManager.GetNodeData(topNode, type);
+        return NodeManager.getNodeData(topNode, type);
     }
 
     public <T> boolean tryGet(String key, Out<T> value) {
@@ -245,8 +253,8 @@ public abstract class ReadableDataFile {
         Set<String> keys = this.topLevelKeys();
         Map<TKey, TValue> map = new HashMap<>(keys.size());
         for (String keyText: keys) {
-            TKey key = BaseTypes.parseBaseType(keyType, keyText);
-            TValue value = NodeManager.getNodeData(valueType, topLevelNodes.get(keyText));
+            TKey key = BaseTypes.parseBaseType(keyText, keyType);
+            TValue value = NodeManager.getNodeData(topLevelNodes.get(keyText), valueType);
             map.put(key, value);
         }
 

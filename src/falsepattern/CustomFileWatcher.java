@@ -1,6 +1,5 @@
 package falsepattern;
 
-import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.ArrayList;
@@ -31,7 +30,7 @@ public class CustomFileWatcher implements Runnable {
 
     private final boolean isManager;
     private WatchService watcher;
-    private AtomicReference<List<Runnable>> fileChangeCallbacks = new AtomicReference<>(new ArrayList<>());
+    private final AtomicReference<List<Runnable>> fileChangeCallbacks = new AtomicReference<>(new ArrayList<>());
 
     private CustomFileWatcher() {
         isManager = true;
@@ -50,6 +49,7 @@ public class CustomFileWatcher implements Runnable {
         fileChangeCallbacks.get().add(callback);
     }
 
+    @SuppressWarnings("BusyWait")
     @Override
     public void run() {
         if (isManager) {

@@ -32,9 +32,9 @@ public class ListNode extends Node {
 
     @Override
     public void setValue(String value) {
-        if (this.unappliedStyle) {
+        if (this.unAppliedStyle) {
             setDataText(addSpaces("-", getStyle().getSpacesAfterDash()) + value);
-            this.unappliedStyle = false;
+            this.unAppliedStyle = false;
             return;
         }
 
