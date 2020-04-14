@@ -2,6 +2,7 @@ package succ.datafiles.abstractions;
 
 import falsepattern.Out;
 import falsepattern.Pair;
+import falsepattern.reflectionhelper.ClassTree;
 import succ.datafiles.memoryfiles.MemoryReadOnlyDataFile;
 import succ.parsinglogic.DataConverter;
 import succ.parsinglogic.NodeManager;
@@ -49,8 +50,8 @@ public abstract class ReadableDataFile {
             String succ = getSavedText();
             //TODO
             Pair<List<Line>, Map<String, KeyNode>> data = DataConverter.dataStructureFromSUCC(succ, this);
-            topLevelLines = data.A;
-            topLevelNodes = data.B;
+            topLevelLines = data.key;
+            topLevelNodes = data.value;
         } catch (Exception e) {
             throw new RuntimeException("Error parsing data from file: ", e);
         }
@@ -123,23 +124,23 @@ public abstract class ReadableDataFile {
     }
 
     /**
-     * Like {@link #get(String, T)},
+     * Like {@link #get(ClassTree, String, T)},
      * but the default value is searched for in the default file text.
      * @param type The type to get the data as (required due to type erasure)
      * @param key What the data is labeled as within the file
      */
     @SuppressWarnings("unchecked")
-    public <T> T get(Class<T> type, String key) {
+    public <T> T get(ClassTree<T> type, String key) {
         return (T) getNonGeneric(type, key);
     }
 
     /**
-     * Like {@link #getNonGeneric(Class, String, Object)},
+     * Like {@link #getNonGeneric(ClassTree, String, Object)},
      * but the default value is searched for in the default file text.
      * @param type The type to get the data as
      * @param key What the data is labeled as within the file
      */
-    public Object getNonGeneric(Class<?> type, String key) {
+    public Object getNonGeneric(ClassTree<?> type, String key) {
         Object defaultDefaultValue = ParsingLogicExtensions.getDefaultValue(type);
         Object defaultValue = defaultFileCache != null ? defaultFileCache.getNonGeneric(type, key, defaultDefaultValue) : defaultDefaultValue;
         return this.getNonGeneric(type, key, defaultValue);
@@ -156,17 +157,17 @@ public abstract class ReadableDataFile {
      * @param defaultValue If the key does not exist in the file, this value is returned instead.
      */
     @SuppressWarnings("unchecked")
-    public <T> T get(String key, T defaultValue) {
-        return (T) getNonGeneric(defaultValue.getClass(), key, defaultValue);
+    public <T> T get(ClassTree<T> type, String key, T defaultValue) {
+        return (T) getNonGeneric(type, key, defaultValue);
     }
 
     /**
-     * Non-generic version of {@link #get(String, Object)}. You probably want to use {@link #get(String, Object)}.
+     * Non-generic version of {@link #get(ClassTree, String, Object)}. You probably want to use {@link #get(ClassTree, String, Object)}.
      * @param type The type to get the data as
      * @param key What the data is labeled as within the file
      * @param defaultValue If the key does not exist in the file, this value is returned instead
      */
-    public Object getNonGeneric(Class<?> type, String key, Object defaultValue) {
+    public Object getNonGeneric(ClassTree<?> type, String key, Object defaultValue) {
         if (!keyExists(key)) {
             return defaultValue;
         }
@@ -176,21 +177,21 @@ public abstract class ReadableDataFile {
     }
 
     /**
-     * Like {@link #getAtPath(T, String...)}, but the default value is searched for in the default file text
+     * Like {@link #getAtPath(ClassTree, Object, String...)}, but the default value is searched for in the default file text
      * @param type The type to get the data as (required due to type erasure)
      * @param path The nested path of the desired data
      */
     @SuppressWarnings("unchecked")
-    public <T> T getAtPath(Class<T> type, String... path) {
+    public <T> T getAtPath(ClassTree<T> type, String... path) {
         return (T) getAtPathNonGeneric(type, path);
     }
 
     /**
-     * Like {@link #getAtPathNonGeneric(Class, Object, String...)}, but the value is searched for in the default file text
+     * Like {@link #getAtPathNonGeneric(ClassTree, Object, String...)}, but the value is searched for in the default file text
      * @param type The type to get the data as
      * @param path The nested path of the desired data
      */
-    public Object getAtPathNonGeneric(Class<?> type, String... path) {
+    public Object getAtPathNonGeneric(ClassTree<?> type, String... path) {
         Object defaultDefaultValue = ParsingLogicExtensions.getDefaultValue(type);
         Object defaultValue = defaultFileCache != null ? defaultFileCache.getAtPathNonGeneric(type, defaultDefaultValue, path) : defaultDefaultValue;
 
@@ -198,24 +199,24 @@ public abstract class ReadableDataFile {
     }
 
     /**
-     * Like {@link #get(String, Object)} but works for nested paths instead of just the top level of the file.
+     * Like {@link #get(ClassTree, String, Object)} but works for nested paths instead of just the top level of the file.
      * @param defaultValue If the key does not exist in the file, this value is returned instead.
      * @param path The nested path of the desired data
      */
     @SuppressWarnings("unchecked")
-    public <T> T getAtPath(T defaultValue, String... path) {
-        return (T) getAtPathNonGeneric(defaultValue.getClass(), defaultValue, path);
+    public <T> T getAtPath(ClassTree<T> type, T defaultValue, String... path) {
+        return (T) getAtPathNonGeneric(type, defaultValue, path);
     }
 
     /**
-     * Non-generic version of {@link #getAtPath(Object, String...)}. You probably want to use {@link #getAtPath(Object, String...)}.
+     * Non-generic version of {@link #getAtPath(ClassTree, Object, String...)}. You probably want to use {@link #getAtPath(ClassTree, Object, String...)}.
      * @param type The type to get the data as
      * @param defaultValue If the key does not exist in the file, this value is returned instead.
      * @param path The nested path of the desired data
      */
-    public Object getAtPathNonGeneric(Class<?> type, Object defaultValue, String... path) {
-        if (defaultValue != null && ! type.equals(defaultValue.getClass())) {
-            throw new RuntimeException("defaultValue is not of type " + type.getName());
+    public Object getAtPathNonGeneric(ClassTree<?> type, Object defaultValue, String... path) {
+        if (defaultValue != null && ! type.type.equals(defaultValue.getClass())) {
+            throw new RuntimeException("defaultValue is not of type " + type.toString());
         }
 
         if (!keyExistsAtPath(path)) {
@@ -230,32 +231,33 @@ public abstract class ReadableDataFile {
         return NodeManager.getNodeData(topNode, type);
     }
 
-    public <T> boolean tryGet(String key, Out<T> value) {
+    public <T> boolean tryGet(ClassTree<T> type, String key, Out<T> value) {
         if (!keyExists(key)) {
             //value = default;
             return false;
         }
 
-        value.value = get(value.type, key);
+        value.value = get(type, key);
         return true;
     }
 
     /**
      * Interpret this file as a map. Top-level keys in the file are interpreted as keys in the map.
-     * @param keyType The class of the map keys (required due to type erasure), must be a Base Type
-     * @param valueType The class of the map values (required due to type erasure)
      */
-    public <TKey, TValue> Map<TKey, TValue> getAsMap(Class<TKey> keyType, Class<TValue> valueType) {
-        if (!BaseTypes.isBaseType(keyType)) {
-            throw new RuntimeException("When using getAsMap, TKey must be a base type");
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public Map<?, ?> getAsMap(ClassTree<?> mapType) {
+        ClassTree<?> keyType = mapType.getChildren().get(0);
+        ClassTree<?> valueType = mapType.getChildren().get(1);
+        if (!BaseTypes.isBaseType(mapType.getChildren().get(0).type)) {
+            throw new RuntimeException("When using getAsMap, the key type must be a base type");
         }
 
         Set<String> keys = this.topLevelKeys();
-        Map<TKey, TValue> map = new HashMap<>(keys.size());
+        Map<?, ?> map = new HashMap<>(keys.size());
         for (String keyText: keys) {
-            TKey key = BaseTypes.parseBaseType(keyText, keyType);
-            TValue value = NodeManager.getNodeData(topLevelNodes.get(keyText), valueType);
-            map.put(key, value);
+            Object key = BaseTypes.parseBaseType(keyText, keyType.type);
+            Object value = NodeManager.getNodeData(topLevelNodes.get(keyText), valueType);
+            ((Map)map).put(key, value);
         }
 
         return map;

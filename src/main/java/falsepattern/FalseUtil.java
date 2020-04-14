@@ -98,17 +98,28 @@ public final class FalseUtil {
         char[] chars = s.toCharArray();
         int firstIndex = 0;
         for (; firstIndex < chars.length; firstIndex++) {
-            if (chars[firstIndex] > '\u0020') {
+            if (chars[firstIndex] > ' ') {
                 break;
             }
         }
         if (firstIndex == 0) {
             return s;
-        } else if (firstIndex < chars.length - 1) {
+        } else if (firstIndex < chars.length) {
             return s.substring(firstIndex);
         } else {
             return "";
         }
+    }
+
+    public static int countChar(String s, char c) {
+        char[] carr = s.toCharArray();
+        int count = 0;
+        for (char value : carr) {
+            if (value == c) {
+                count++;
+            }
+        }
+        return count;
     }
 
 }

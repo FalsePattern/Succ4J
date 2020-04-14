@@ -180,13 +180,13 @@ public abstract class Node extends Line {
             return "";
         }
 
-        return rawText.substring(getDataStartIndex(), getDataEndIndex() - getDataStartIndex()).replace("\\#", "#");
+        return rawText.substring(getDataStartIndex(), getDataEndIndex()).replace("\\#", "#");
     }
 
     public void setDataText(String newData) {
         rawText = rawText.substring(0, getDataStartIndex())
                 + newData.replace("#", "\\#")
-                + rawText.substring(getDataEndIndex(), rawText.length() - getDataEndIndex());
+                + rawText.substring(getDataEndIndex());
     }
 
     private int getDataStartIndex() {

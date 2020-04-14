@@ -1,6 +1,7 @@
 package succ;
 
 import falsepattern.Out;
+import falsepattern.reflectionhelper.ClassTree;
 import succ.datafiles.ReadOnlyDataFile;
 import succ.datafiles.abstractions.ReadableDataFile;
 import succ.datafiles.memoryfiles.MemoryReadOnlyDataFile;
@@ -106,13 +107,13 @@ public class DistributedData {
     /**
      * Does data exist in any of our files at this top-level key?
      */
-    public boolean keyExists(String key) {
+    public boolean keyDoesNotExist(String key) {
         for (ReadableDataFile file: dataSources) {
             if (file.keyExists(key)) {
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
     /**
@@ -133,7 +134,7 @@ public class DistributedData {
      * @param key What the data is labeled as within the file.
      */
     @SuppressWarnings("unchecked")
-    public <T> T get(Class<T> type, String key) {
+    public <T> T get(ClassTree<T> type, String key) {
         return (T)getNonGeneric(type, key, ParsingLogicExtensions.getDefaultValue(type));
     }
 
@@ -143,17 +144,17 @@ public class DistributedData {
      * @param defaultValue If the key does not exist in the file, this value is returned instead.
      */
     @SuppressWarnings("unchecked")
-    public <T> T get(String key, T defaultValue) {
-        return (T) getNonGeneric(defaultValue.getClass(), key, defaultValue);
+    public <T> T get(ClassTree<T> type, String key, T defaultValue) {
+        return (T) getNonGeneric(type, key, defaultValue);
     }
 
-    public Object getNonGeneric(Class<?> type, String key) {
+    public Object getNonGeneric(ClassTree<?> type, String key) {
         return getNonGeneric(type, key, ParsingLogicExtensions.getDefaultValue(type));
     }
 
-    public Object getNonGeneric(Class<?> type, String key, Object defaultValue) {
-        if (defaultValue != null && !defaultValue.getClass().equals(type)) {
-            throw new IllegalArgumentException("Type " + type.getName() + " must match type of default value with type " + defaultValue.getClass());
+    public Object getNonGeneric(ClassTree<?> type, String key, Object defaultValue) {
+        if (defaultValue != null && !defaultValue.getClass().equals(type.type)) {
+            throw new IllegalArgumentException("Type " + type.toString() + " must match type of default value with type " + defaultValue.getClass());
         }
 
         for (ReadableDataFile file: dataSources) {
@@ -166,22 +167,22 @@ public class DistributedData {
     }
 
     /**
-     * Like {@link #get(String, Object)}, but works for nested paths instead of just the top level of the file.
+     * Like {@link #get(ClassTree, String, Object)}, but works for nested paths instead of just the top level of the file.
      * @param defaultValue If the key does not exist in the file, this value is returned instead.
      * @param path The path to search for the data at.
      */
     @SuppressWarnings("unchecked")
-    public <T> T getAtPath(T defaultValue, String... path) {
-        return (T) getAtPathNonGeneric(defaultValue.getClass(), defaultValue, path);
+    public <T> T getAtPath(ClassTree<T> type, T defaultValue, String... path) {
+        return (T) getAtPathNonGeneric(type, defaultValue, path);
     }
 
-    public Object getAtPathNonGeneric(Class<?> type, String... path) {
+    public Object getAtPathNonGeneric(ClassTree<?> type, String... path) {
         return getAtPathNonGeneric(type, ParsingLogicExtensions.getDefaultValue(type), path);
     }
 
-    public Object getAtPathNonGeneric(Class<?> type, Object defaultValue, String... path) {
-        if (defaultValue != null && !defaultValue.getClass().equals(type)) {
-            throw new IllegalArgumentException("Type " + type.getName() + " must match type of default value with type " + defaultValue.getClass());
+    public Object getAtPathNonGeneric(ClassTree<?> type, Object defaultValue, String... path) {
+        if (defaultValue != null && !defaultValue.getClass().equals(type.type)) {
+            throw new IllegalArgumentException("Type " + type.toString() + " must match type of default value with type " + defaultValue.getClass());
         }
 
         for (ReadableDataFile file: dataSources) {
@@ -193,8 +194,8 @@ public class DistributedData {
         return defaultValue;
     }
 
-    public <T> boolean tryGet(Class<T> type, String key, Out<T> value) {
-        if (!keyExists(key)) {
+    public <T> boolean tryGet(ClassTree<T> type, String key, Out<T> value) {
+        if (keyDoesNotExist(key)) {
             value.value = ParsingLogicExtensions.getDefaultValue(type);
             return false;
         }
@@ -203,8 +204,8 @@ public class DistributedData {
         return true;
     }
 
-    public boolean tryGetNonGeneric(Class<?> type, String key, Out<Object> value) {
-        if (!keyExists(key)) {
+    public boolean tryGetNonGeneric(ClassTree<?> type, String key, Out<Object> value) {
+        if (keyDoesNotExist(key)) {
             value.value = null;
             return false;
         }

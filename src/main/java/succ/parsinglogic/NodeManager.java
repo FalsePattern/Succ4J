@@ -1,10 +1,12 @@
 package succ.parsinglogic;
 
+import falsepattern.reflectionhelper.ClassTree;
 import succ.Utilities;
 import succ.parsinglogic.nodes.MultiLineStringNode;
 import succ.parsinglogic.nodes.Node;
 import succ.parsinglogic.types.BaseTypes;
 import succ.parsinglogic.types.CollectionTypes;
+import succ.parsinglogic.types.ComplexTypeShortcuts;
 import succ.parsinglogic.types.ComplexTypes;
 import succ.style.FileStyle;
 
@@ -14,12 +16,9 @@ import static succ.parsinglogic.ParsingLogicExtensions.containsNewLine;
  * Gets and sets the data encoded by Nodes.
  */
 public class NodeManager {
-    public static <T> void setNodeData(Node node, T data, FileStyle style) {
-        setNodeData(node, data, data.getClass(), style);
-    }
 
     @SuppressWarnings("UnnecessaryReturnStatement")
-    public static void setNodeData(Node node, Object data, Class<?> type, FileStyle style) {
+    public static <T> void setNodeData(Node node, Object data, ClassTree<?> type, FileStyle style) {
         if (data == null) {
             node.clearChildren();
             node.setValue(Utilities.getNullIndicator());
@@ -37,32 +36,32 @@ public class NodeManager {
         // In case 2, the string is probably going to be saved again later with multiple lines. It doesn't seem necessary to disrupt the structure
         // of the file for something temporary.
         String dataAsString = data.toString();
-        if (type.equals(String.class) && (containsNewLine(dataAsString) || node.getChildNodes().size() > 0)) {
+        if (type.type.equals(String.class) && (containsNewLine(dataAsString) || node.getChildNodes().size() > 0)) {
             BaseTypes.setStringSpecialCase(node, dataAsString, style);
-        } else if (BaseTypes.isBaseType(type)) {
-            BaseTypes.setBaseTypeNode(node, data, type, style);
-        } else if (CollectionTypes.trySetCollection(node, data, type, Object.class, style)) {
+        } else if (BaseTypes.isBaseType(type.type)) {
+            BaseTypes.setBaseTypeNode(node, data, type.type, style);
+        } else if (CollectionTypes.trySetCollection(node, data, type, style)) {
             return;
         } else {
             ComplexTypes.setComplexNode(node, data, type, style);
         }
     }
 
-    public static <T> T getNodeData(Node node, Class<T> type) {
+    public static <T> T getNodeData(Node node, ClassTree<T> type) {
         if (node.getValue().equals(Utilities.getNullIndicator())) {
             return null;
         }
 
         try {
-            if (String.class.equals(type) && node.getValue().equals(MultiLineStringNode.terminator) && node.getChildLines().size() > 0) {
-                return type.cast(BaseTypes.parseSpecialStringCase(node));
+            if (String.class.equals(type.type) && node.getValue().equals(MultiLineStringNode.terminator) && node.getChildLines().size() > 0) {
+                return type.type.cast(BaseTypes.parseSpecialStringCase(node));
             }
 
-            if (BaseTypes.isBaseType(type)) {
-                return BaseTypes.parseBaseType(node.getValue(), type);
+            if (BaseTypes.isBaseType(type.type)) {
+                return BaseTypes.parseBaseType(node.getValue(), type.type);
             }
 
-            T collection = type.cast(CollectionTypes.tryGetCollection(node, type, Object.class));
+            T collection = type.type.cast(CollectionTypes.tryGetCollection(node, type));
 
             if (collection != null) {
                 return collection;
@@ -70,12 +69,12 @@ public class NodeManager {
 
             String value = node.getValue();
             if (!(value == null || value.equals(""))) {
-               throw new RuntimeException("Tried to get node data from shortcut, however shortcuts are not yet implemented in SUCC4J");
+                return ComplexTypeShortcuts.getFromShortcut(value, type.type);
             }
 
             return ComplexTypes.retrieveComplexType(node, type);
         } catch (Exception e) {
-            throw new RuntimeException("Error getting data of type " + type.getName() + " from node: ", e);
+            throw new RuntimeException("Error getting data of type " + type.toString() + " from node: ", e);
         }
     }
 }

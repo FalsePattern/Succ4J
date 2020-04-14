@@ -1,6 +1,7 @@
 package succ.datafiles.abstractions;
 
 import falsepattern.Out;
+import falsepattern.reflectionhelper.ClassTree;
 import succ.Utilities;
 import succ.parsinglogic.NodeManager;
 import succ.parsinglogic.nodes.KeyNode;
@@ -67,18 +68,18 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * @param defaultValue If the key does not exist in the file, this value is saved there and returned
      */
     @Override
-    public <T> T get(String key, T defaultValue) {
-        return super.get(key, defaultValue);
+    public <T> T get(ClassTree<T> type, String key, T defaultValue) {
+        return super.get(type, key, defaultValue);
     }
 
     /**
-     * Non-generic version of {@link #get( String, Object)}. You probably want to use {@link #get(String, Object)}.
+     * Non-generic version of {@link #get(ClassTree, String, Object)}. You probably want to use {@link #get(ClassTree, String, Object)}.
      * @param type The type to get the data as
      * @param key What the data is labeled as within the file
      * @param defaultValue If the key does not exist in the file, this value is saved there and returned
      */
     @Override
-    public Object getNonGeneric(Class<?> type, String key, Object defaultValue) {
+    public Object getNonGeneric(ClassTree<?> type, String key, Object defaultValue) {
         if (!keyExists(key)) {
             setNonGeneric(type, key, defaultValue);
             return defaultValue;
@@ -93,13 +94,13 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * @param key What the data is labeled as within the file
      * @param value The value to save
      */
-    public  <T> void set(String key, T value) {
-        setNonGeneric(value.getClass(), key, value);
+    public <T> void set(ClassTree<?> type, String key, T value) {
+        setNonGeneric(type, key, value);
     }
 
-    public void setNonGeneric(Class<?> type, String key, Object value) {
-        if (value != null && !type.equals(value.getClass())) {
-            throw new ClassCastException("Value is not of type " + type.getName());
+    public void setNonGeneric(ClassTree<?> type, String key, Object value) {
+        if (value != null && !type.type.isInstance(value)) {
+            throw new ClassCastException("Value is not of type " + type.toString());
         }
 
         if (!keyExists(key)) {
@@ -117,7 +118,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
     }
 
     @Override
-    public Object getAtPathNonGeneric(Class<?> type, Object defaultValue, String... path) {
+    public Object getAtPathNonGeneric(ClassTree<?> type, Object defaultValue, String[] path) {
         if (!keyExistsAtPath(path)) {
             setAtPathNonGeneric(type, defaultValue, path);
             return defaultValue;
@@ -132,23 +133,23 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
     }
 
     /**
-     * Like {@link #set(String, Object)} but works for nested paths instead of just the top level of the file.
+     * Like {@link #set(ClassTree, String, Object)} but works for nested paths instead of just the top level of the file.
      * @param value The value to save
      * @param path The nested path of the desired data location
      */
-    public <T> void setAtPath(T value, String... path) {
-        setAtPathNonGeneric(value.getClass(), value, path);
+    public <T> void setAtPath(ClassTree<T> type, T value, String[] path) {
+        setAtPathNonGeneric(type, value, path);
     }
 
     /**
-     * Non-generic version of {@link #setAtPath(Object, String...)}. You probably want to use {@link #setAtPath(Object, String...)}.
+     * Non-generic version of {@link #setAtPath(ClassTree, Object, String...)}. You probably want to use {@link #setAtPath(ClassTree, Object, String...)}.
      * @param type The type to save the data as
      * @param value The value to save
      * @param path The nested path of the desired data location
      */
-    public void setAtPathNonGeneric(Class<?> type, Object value, String... path) {
-        if (value != null && !value.getClass().equals(type)) {
-            throw new ClassCastException("Value is not of type " + type.getName());
+    public void setAtPathNonGeneric(ClassTree<?> type, Object value, String... path) {
+        if (value != null && !value.getClass().equals(type.type)) {
+            throw new ClassCastException("Value is not of type " + type.toString());
         }
 
         if (path.length < 1) {
@@ -191,22 +192,22 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * Save this file as an object of type T, using that type's fields and properties as top-level keys.
      * @param saveThis The object to save
      */
-    public <T> void saveAsObject(T saveThis) {
-        saveAsObjectNonGeneric(saveThis.getClass(), saveThis);
+    public <T> void saveAsObject(ClassTree<T> type, T saveThis) {
+        saveAsObjectNonGeneric(type, saveThis);
     }
 
     /**
-     * Non-generic version of {@link #saveAsObject(Object)}. You probably want to use {@link #saveAsObject(Object)}.
+     * Non-generic version of {@link #saveAsObject(ClassTree, Object)}. You probably want to use {@link #saveAsObject(ClassTree, Object)}.
      * @param type What type to save this object as
      * @param saveThis The object to save
      */
-    public void saveAsObjectNonGeneric(Class<?> type, Object saveThis) {
+    public void saveAsObjectNonGeneric(ClassTree<?> type, Object saveThis) {
         boolean _autoSave = autoSave;
         autoSave = false; // don't write to disk when we don't have to
 
         try {
-            for(Field f: ComplexTypes.getValidFields(type)) {
-                setNonGeneric(f.getClass(), f.getName(), f.get(saveThis));
+            for(Field f: ComplexTypes.getValidFields(type.type)) {
+                setNonGeneric(ClassTree.parseFromField(f), f.getName(), f.get(saveThis));
             }
 
             //Properties don't exist in Java 8
@@ -225,7 +226,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
     /**
      * Save this file as a map, using the map's keys as top-level keys in the file.
      */
-    public <TKey, TValue> void saveAsMap(Map<TKey, TValue> map) {
+    public <TKey, TValue> void saveAsMap(ClassTree<Map<?, ?>> classTree, Map<TKey, TValue> map) {
 
         boolean _autoSave = autoSave;
         autoSave = false; // don't write to disk when we don't have to
@@ -247,7 +248,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
                 }
 
                 currentKeys.add(keyText);
-                set(keyText, map.get(key));
+                set(classTree.getChildren().get(0), keyText, map.get(key));
             }
 
             for(String key: this.topLevelKeys()) {

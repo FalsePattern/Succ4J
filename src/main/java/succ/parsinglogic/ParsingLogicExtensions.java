@@ -1,5 +1,7 @@
 package succ.parsinglogic;
 
+import falsepattern.reflectionhelper.ClassTree;
+
 import java.lang.reflect.InvocationTargetException;
 
 public class ParsingLogicExtensions {
@@ -12,7 +14,7 @@ public class ParsingLogicExtensions {
     }
 
     public static String unQuote(String s) {
-        return isQuoted(s) ? s.substring(1, s.length() - 2) : s;
+        return isQuoted(s) ? s.substring(1, s.length() - 1) : s;
     }
 
     public static int getIndentationLevel(String s) {
@@ -48,7 +50,7 @@ public class ParsingLogicExtensions {
     public static String[] splitIntoLines(String s) {
         return s.replace("\r\n", "\n") //windows line endings
                 .replace("\r", "\n") //classic macOS line endings
-                .split("\n");
+                .split("\n", -1);
     }
 
     public static boolean containsNewLine(String s) {
@@ -59,9 +61,9 @@ public class ParsingLogicExtensions {
         return s.trim().length() == 0;
     }
 
-    public static <T> T getDefaultValue(Class<T> type) {
+    public static <T> T getDefaultValue(ClassTree<T> type) {
         try {
-            return type.getConstructor().newInstance();
+            return type.type.getConstructor().newInstance();
         } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             return null;
         }

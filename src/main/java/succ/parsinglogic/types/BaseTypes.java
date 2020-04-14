@@ -11,6 +11,8 @@ import java.lang.reflect.Type;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.*;
@@ -45,11 +47,13 @@ public class BaseTypes {
     /**
      * Turn some text into data, if that data is of a base type.
      */
+    @SuppressWarnings("unchecked")
     public static <T> T parseBaseType(String text, Class<T> type) {
+        text = text.trim();
         try {
             {
                 if (baseParseMethods.containsKey(type)) {
-                    return type.cast(baseParseMethods.get(type).parse(text));
+                    return (T)(baseParseMethods.get(type).parse(text));
                 }
                 if (type != null && type.isEnum()) {
                     return type.cast(parseEnum(text, type));
@@ -154,8 +158,8 @@ public class BaseTypes {
                 text.append(Utilities.getNewLine());
             }
         }
-
-        return text.toString();
+        String result = text.toString();
+        return result.equals("") ? "\n" : result.replace("\r\n", "\n").replace("\r", "\n");
     }
 
     private static final SerializeMethod serializeInt = Object::toString;
@@ -179,10 +183,11 @@ public class BaseTypes {
         format.setMaximumIntegerDigits(Integer.MAX_VALUE);
         format.setMaximumFractionDigits(Integer.MAX_VALUE);
         format.setRoundingMode(RoundingMode.HALF_UP);
+        format.setGroupingUsed(false);
         return format.format((double)val);
     };
 
-    private static final SerializeMethod serializeFloat = (value) -> serializeDouble.serialize((double)value);
+    private static final SerializeMethod serializeFloat = (value) -> serializeDouble.serialize((double)(float)value);
 
     private static final ParseMethod parseLong = Long::parseLong;
     private static final ParseMethod parseInt = Integer::parseInt;
@@ -261,13 +266,17 @@ public class BaseTypes {
         }
     }
 
-    private static final SerializeMethod serializeTemporal = (value) -> {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US);
-        return formatter.format((TemporalAccessor)value);
+    private static final SerializeMethod serializeDate = (value) -> {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);
+        if (value instanceof Date) {
+            return formatter.format(((Date)value).toInstant());
+        } else {
+            return formatter.format((TemporalAccessor) value);
+        }
     };
     private static final ParseMethod parseTemporal = (text) -> {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US);
-        return formatter.parse(text);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);
+        return Date.from(Instant.from(formatter.parse(text)));
     };
 
     static {
@@ -293,7 +302,7 @@ public class BaseTypes {
         baseSerializeMethods.put(char.class, serializeChar);
         baseSerializeMethods.put(Character.class, serializeChar);
         baseSerializeMethods.put(Class.class, serializeType);
-        baseSerializeMethods.put(Date.class, serializeTemporal);
+        baseSerializeMethods.put(Date.class, serializeDate);
 
         baseStyledSerializeMethods.put(String.class, serializeString);
         baseStyledSerializeMethods.put(boolean.class, serializeBoolean);

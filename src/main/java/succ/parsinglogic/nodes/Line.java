@@ -8,7 +8,9 @@ import static succ.parsinglogic.ParsingLogicExtensions.addIndent;
  * Represents a single line of text in a SUCC file.
  */
 public class Line {
-    public Line() {}
+    public Line() {
+        this.rawText = "";
+    }
     public Line(String rawText) {
         this.rawText = rawText;
     }
