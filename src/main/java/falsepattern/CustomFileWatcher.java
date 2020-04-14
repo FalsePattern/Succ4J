@@ -73,9 +73,3 @@ public class CustomFileWatcher implements Runnable {
         }
     }
 }
-
-
-//Also used plugins:
-// Atom Material Icons
-// Material Theme UI
-// Rainbow Brackets
