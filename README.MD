@@ -1,3 +1,3 @@
-See https://github.com/JimmyCushnie/SUCC for the documentation.
+See https://github.com/JimmyCushnie/SUCC for the documentation. See the tests for examples.
 
-Port progress: mostly complete, can be built, tests pending
+Port progress: Completed
