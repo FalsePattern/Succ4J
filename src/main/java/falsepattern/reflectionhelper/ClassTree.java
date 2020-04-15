@@ -7,11 +7,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ClassTree<T> {
-  private ClassTree<?> parent;
   private final List<ClassTree<?>> children;
   public Class<T> type;
   public ClassTree(Class<T> type) {
-    parent = null;
     children = new ArrayList<>();
     this.type = type;
   }
@@ -19,16 +17,11 @@ public class ClassTree<T> {
   public ClassTree<?> addChildNode(Class<?> type) {
     ClassTree<?> child = new ClassTree<>(type);
     children.add(child);
-    child.parent = this;
     return child;
   }
 
   public List<ClassTree<?>> getChildren() {
     return Collections.unmodifiableList(children);
-  }
-
-  public ClassTree<?> getParent() {
-    return parent;
   }
 
   public String toString() {

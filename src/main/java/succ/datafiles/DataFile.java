@@ -11,8 +11,9 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
-public class DataFile extends ReadableWritableDataFile implements IDataFileOnDisk, Runnable {
+public class DataFile extends ReadableWritableDataFile implements IDataFileOnDisk {
 
     /**
      * Creates a new DataFile object corresponding to a SUCC file in system storage.
@@ -79,9 +80,20 @@ public class DataFile extends ReadableWritableDataFile implements IDataFileOnDis
 
     //the following code is copied between DataFile and ReadOnlyDataFile
     private final String filePath;
-    public Runnable onAutoReload;
     private final AtomicBoolean _autoReload = new AtomicBoolean(false);
     protected final AtomicBoolean ignoreNextFileReload = new AtomicBoolean();
+    public Runnable onAutoReload = () -> {
+        if (!_autoReload.get()) {
+            return;
+        }
+
+        if (ignoreNextFileReload.get()) {
+            ignoreNextFileReload.set(false);
+            return;
+        }
+        reloadAllData();
+        onAutoReload().run();
+    };
 
     @Override
     public String getFilePath() {
@@ -116,27 +128,14 @@ public class DataFile extends ReadableWritableDataFile implements IDataFileOnDis
     protected void setupWatcher() {
         Path path = Paths.get(getFilePath());
         try {
-            WatchService watchService = path.getFileSystem().newWatchService();
-            path.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+            WatchService watchService = path.getParent().getFileSystem().newWatchService();
+            path.getParent().register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
             CustomFileWatcher watcher = new CustomFileWatcher(watchService);
-            watcher.addCallback(this);
+            watcher.addCallback(getFilePath(), onAutoReload);
         } catch (IOException e) {
             throw new RuntimeException("Error while initializing SUCC file watcher: ", e);
         }
     }
 
-    @Override
-    public void run() {
-        if (!_autoReload.get()) {
-            return;
-        }
-
-        if (ignoreNextFileReload.get()) {
-            ignoreNextFileReload.set(false);
-            return;
-        }
-        reloadAllData();
-        onAutoReload().run();
-    }
 
 }

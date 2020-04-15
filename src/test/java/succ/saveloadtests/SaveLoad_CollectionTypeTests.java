@@ -4,6 +4,7 @@ import falsepattern.reflectionhelper.ClassTree;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import succ.ComplexType;
+import succ.TestUtilities;
 import succ.datafiles.memoryfiles.MemoryDataFile;
 
 import java.util.*;
@@ -86,16 +87,7 @@ public class SaveLoad_CollectionTypeTests {
         MemoryDataFile file = new MemoryDataFile();
         file.set(ClassTree.parseFromFieldName(getClass(), "savedMapStringInt"), savedValueKey, savedMapStringInt);
         Map<String, Integer> loadedValue = (Map<String, Integer>) file.get(ClassTree.parseFromString("java.util.HashMap<java.lang.String, java.lang.Integer>"), savedValueKey);
-
-        for (Map.Entry<String, Integer> savedEntry : savedMapStringInt.entrySet()) {
-            Assertions.assertTrue(loadedValue.containsKey(savedEntry.getKey()));
-            Assertions.assertEquals(loadedValue.get(savedEntry.getKey()), savedEntry.getValue());
-        }
-
-        for (Map.Entry<String, Integer> loadedEntry : loadedValue.entrySet()) {
-            Assertions.assertTrue(savedMapStringInt.containsKey(loadedEntry.getKey()));
-            Assertions.assertEquals(savedMapStringInt.get(loadedEntry.getKey()), loadedEntry.getValue());
-        }
+        TestUtilities.assertMapContentsEqual(savedMapStringInt, loadedValue);
     }
 
     Map<ComplexType, ComplexType> savedMapComplex;
@@ -109,16 +101,7 @@ public class SaveLoad_CollectionTypeTests {
         MemoryDataFile file = new MemoryDataFile();
         file.set(ClassTree.parseFromFieldName(getClass(), "savedMapComplex"), savedValueKey, savedMapComplex);
         Map<ComplexType, ComplexType> loadedValue = (Map<ComplexType, ComplexType>) file.get(ClassTree.parseFromString("java.util.HashMap<succ.ComplexType, succ.ComplexType>"), savedValueKey);
-        for (Map.Entry<ComplexType, ComplexType> savedEntry : savedMapComplex.entrySet()) {
-            boolean anyMatch = false;
-            for (Map.Entry<ComplexType, ComplexType> loadedEntry: loadedValue.entrySet()) {
-                if (savedEntry.getKey().equals(loadedEntry.getKey()) && savedEntry.getValue().equals(loadedEntry.getValue())) {
-                    anyMatch = true;
-                    break;
-                }
-            }
-            Assertions.assertTrue(anyMatch);
-        }
+        TestUtilities.assertMapContentsEqual(savedMapComplex, loadedValue);
     }
 
     private static final int[][][][] deeplyNestedIntArray = new int[][][][]

@@ -1,11 +1,19 @@
 package falsepattern;
 
+import succ.Utilities;
+
+import javax.rmi.CORBA.Util;
+import java.nio.file.Path;
+import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 //Evil threaded class
 //TODO separate manager and watcher classes
@@ -30,7 +38,7 @@ public class CustomFileWatcher implements Runnable {
 
     private final boolean isManager;
     private WatchService watcher;
-    private final AtomicReference<List<Runnable>> fileChangeCallbacks = new AtomicReference<>(new ArrayList<>());
+    private final AtomicReference<Map<String, Runnable>> fileChangeCallbacks = new AtomicReference<>(new HashMap<>());
 
     private CustomFileWatcher() {
         isManager = true;
@@ -41,12 +49,12 @@ public class CustomFileWatcher implements Runnable {
         customWatchers.get().add(this);
     }
 
-    public synchronized void addCallback(Runnable callback) {
+    public synchronized void addCallback(String relativeOrAbsolutePath, Runnable callback) {
         if (isManager) {
             //We do not do that here
             throw new RuntimeException("Tried to add callback to manager file watcher");
         }
-        fileChangeCallbacks.get().add(callback);
+        fileChangeCallbacks.get().put(Utilities.absolutePath(relativeOrAbsolutePath), callback);
     }
 
     @SuppressWarnings("BusyWait")
@@ -66,8 +74,12 @@ public class CustomFileWatcher implements Runnable {
     private synchronized void runSingle() {
         WatchKey watchKey;
         while ((watchKey = watcher.poll()) != null) {
-            if (watchKey.pollEvents().size() > 0) {
-                fileChangeCallbacks.get().forEach((Runnable::run));
+            List<WatchEvent<?>> events = watchKey.pollEvents();
+            for (WatchEvent<?> event: events) {
+                String path = ((Path)event.context()).toAbsolutePath().toString();
+                if (fileChangeCallbacks.get().containsKey(path)) {
+                    fileChangeCallbacks.get().get(path).run();
+                }
             }
             watchKey.reset();
         }

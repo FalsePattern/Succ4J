@@ -118,7 +118,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
     }
 
     @Override
-    public Object getAtPathNonGeneric(ClassTree<?> type, Object defaultValue, String[] path) {
+    public Object getAtPathNonGeneric(ClassTree<?> type, Object defaultValue, String... path) {
         if (!keyExistsAtPath(path)) {
             setAtPathNonGeneric(type, defaultValue, path);
             return defaultValue;
@@ -137,7 +137,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * @param value The value to save
      * @param path The nested path of the desired data location
      */
-    public <T> void setAtPath(ClassTree<T> type, T value, String[] path) {
+    public <T> void setAtPath(ClassTree<T> type, T value, String... path) {
         setAtPathNonGeneric(type, value, path);
     }
 
@@ -148,7 +148,7 @@ public abstract class ReadableWritableDataFile extends ReadableDataFile {
      * @param path The nested path of the desired data location
      */
     public void setAtPathNonGeneric(ClassTree<?> type, Object value, String... path) {
-        if (value != null && !value.getClass().equals(type.type)) {
+        if (value != null && !type.type.isInstance(value)) {
             throw new ClassCastException("Value is not of type " + type.toString());
         }
 

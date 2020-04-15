@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * A read-only version of {@link DataFile}. Data can be read from disk, but not saved to disk.
  */
-public class ReadOnlyDataFile extends ReadableDataFile implements IDataFileOnDisk, Runnable {
+public class ReadOnlyDataFile extends ReadableDataFile implements IDataFileOnDisk {
 
     /**
      * Creates a new ReadOnlyDataFile object corresponding to a SUCC file in system storage.
@@ -71,9 +71,20 @@ public class ReadOnlyDataFile extends ReadableDataFile implements IDataFileOnDis
 
     //the following code is copied between DataFile and ReadOnlyDataFile
     private final String filePath;
-    public Runnable onAutoReload;
     private final AtomicBoolean _autoReload = new AtomicBoolean(false);
     protected final AtomicBoolean ignoreNextFileReload = new AtomicBoolean();
+    public Runnable onAutoReload = () -> {
+        if (!_autoReload.get()) {
+            return;
+        }
+
+        if (ignoreNextFileReload.get()) {
+            ignoreNextFileReload.set(false);
+            return;
+        }
+        reloadAllData();
+        onAutoReload().run();
+    };
 
     @Override
     public String getFilePath() {
@@ -108,26 +119,12 @@ public class ReadOnlyDataFile extends ReadableDataFile implements IDataFileOnDis
     protected void setupWatcher() {
         Path path = Paths.get(getFilePath());
         try {
-            WatchService watchService = path.getFileSystem().newWatchService();
-            path.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+            WatchService watchService = path.getParent().getFileSystem().newWatchService();
+            path.getParent().register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
             CustomFileWatcher watcher = new CustomFileWatcher(watchService);
-            watcher.addCallback(this);
+            watcher.addCallback(getFilePath(), onAutoReload);
         } catch (IOException e) {
             throw new RuntimeException("Error while initializing SUCC file watcher: ", e);
         }
-    }
-
-    @Override
-    public void run() {
-        if (!_autoReload.get()) {
-            return;
-        }
-
-        if (ignoreNextFileReload.get()) {
-            ignoreNextFileReload.set(false);
-            return;
-        }
-        reloadAllData();
-        onAutoReload().run();
     }
 }
