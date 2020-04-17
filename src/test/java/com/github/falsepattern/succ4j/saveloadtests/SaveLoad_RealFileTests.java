@@ -11,7 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.UUID;
 
-public class SaveLoad_RealFile {
+public class SaveLoad_RealFileTests {
     private static final String savedValueKey = "test key";
 
     @Test
