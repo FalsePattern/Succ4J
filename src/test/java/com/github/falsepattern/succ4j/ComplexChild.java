@@ -1,24 +1,26 @@
 package com.github.falsepattern.succ4j;
 
 import com.github.falsepattern.succ4j.parsinglogic.DoSave;
+import com.github.falsepattern.succ4j.parsinglogic.GenericID;
 
-public class ComplexChild extends ComplexType{
+public class ComplexChild<T> extends ComplexType{
     @DoSave
-    private int childValue;
+    @GenericID(id=0)
+    private T childValue;
 
     // parameter-less constructor required for reflection
     public ComplexChild(){}
 
-    public ComplexChild(int integer, String text, boolean aBoolean) {
+    public ComplexChild(int integer, String text, boolean aBoolean, T genericValue) {
         super(integer, text, aBoolean);
-        childValue = integer * 2;
+        childValue = genericValue;
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof ComplexChild) {
-            ComplexChild other = (ComplexChild) obj;
-            return super.equals(other) && childValue == other.childValue;
+            ComplexChild<?> other = (ComplexChild<?>) obj;
+            return super.equals(other) && childValue.equals(other.childValue);
         } else {
             return false;
         }

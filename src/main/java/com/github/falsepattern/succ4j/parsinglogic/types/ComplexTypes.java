@@ -1,5 +1,6 @@
 package com.github.falsepattern.succ4j.parsinglogic.types;
 
+import com.github.falsepattern.succ4j.parsinglogic.GenericID;
 import com.github.falsepattern.util.reflectionhelper.ClassTree;
 import com.github.falsepattern.succ4j.parsinglogic.NodeManager;
 import com.github.falsepattern.succ4j.parsinglogic.nodes.KeyNode;
@@ -22,10 +23,14 @@ public class ComplexTypes {
             node.setValue("");
         }
 
-        for (Field f: getValidFields(type.type)) {
+        for (Field f: getValidFields(item.getClass())) {
             KeyNode child = node.getChildAddressedByName(f.getName());
             try {
-                NodeManager.setNodeData(child, f.get(item), ClassTree.parseFromField(f), style);
+                if (f.isAnnotationPresent(GenericID.class)) {
+                    NodeManager.setNodeData(child, f.get(item), type.getChildren().get(f.getAnnotation(GenericID.class).id()), style);
+                } else {
+                    NodeManager.setNodeData(child, f.get(item), ClassTree.parseFromField(f), style);
+                }
             } catch (IllegalAccessException e) {
                 throw new RuntimeException("Error while reading field " + f.getName() + " from type " + type.toString(), e);
             }
@@ -43,7 +48,12 @@ public class ComplexTypes {
             if (!node.containsChildNode(f.getName())) continue;
 
             KeyNode child = node.getChildAddressedByName(f.getName());
-            Object data = NodeManager.getNodeData(child, ClassTree.parseFromField(f));
+            Object data;
+            if (f.isAnnotationPresent(GenericID.class)) {
+                data = NodeManager.getNodeData(child, type.getChildren().get(f.getAnnotation(GenericID.class).id()));
+            } else {
+                data = NodeManager.getNodeData(child, ClassTree.parseFromField(f));
+            }
             try {
                 f.set(returnThis, data);
             } catch (IllegalAccessException e) {

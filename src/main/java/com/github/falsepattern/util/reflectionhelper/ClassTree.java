@@ -83,7 +83,7 @@ public class ClassTree<T> {
         }
       }
     } catch (ClassNotFoundException e) {
-      throw new RuntimeException(e);
+      throw new RuntimeException("Class " + e.getMessage() + " not found. Is it a generic field? If yes, then you need to annotate it using @GenericID!", e);
     }
     return stack.pop();
   }

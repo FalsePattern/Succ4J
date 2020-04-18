@@ -19,6 +19,7 @@ public class SaveLoad_ComplexTypeTests {
 
     @Test
     public void saveLoad_ComplexTypeSubclass() {
-        TestUtilities.performSaveLoadTest(new ClassTree<>(ComplexChild.class), new ComplexChild(1, "a", true));
+        TestUtilities.performSaveLoadTest(ClassTree.parseFromString(ComplexChild.class.getName() + "<java.lang.String>"), new ComplexChild<>(1, "a", true, "yo"));
     }
+
 }

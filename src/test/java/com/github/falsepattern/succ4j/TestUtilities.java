@@ -8,11 +8,11 @@ import com.github.falsepattern.succ4j.datafiles.memoryfiles.MemoryDataFile;
 import java.util.Map;
 
 public class TestUtilities {
-    public static <T> void performSaveLoadTest(ClassTree<T> type, T savedValue) {
+    public static void performSaveLoadTest(ClassTree<?> type, Object savedValue) {
         String savedValueKey = "test key";
         MemoryDataFile file = new MemoryDataFile();
         file.set(type, savedValueKey, savedValue);
-        T loadedValue = type.type.cast(file.get(type, savedValueKey));
+        Object loadedValue = type.type.cast(file.get(type, savedValueKey));
         Assertions.assertEquals(savedValue, loadedValue);
     }
 

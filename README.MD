@@ -60,6 +60,8 @@ Replace VERSION with the version you want to use
 Head to the packages tab, select the latest version, and there you can download it as a separate .jar
 
 # Changelog:
+1.2.0: Added annotation @GenericID, which can be used in generic classes to specify which generic type is used by a field based on an index (see ComplexChild.java in the tests for example)
+
 1.1.3: Can now save fields of superclasses. Previously superclass data was lost due to the getDeclaredFields() not returning superclass fields.
 
 1.1.2: Fix error when trying to save/load types containing arrays of references (example: List<Object[]>)
