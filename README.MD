@@ -57,9 +57,10 @@ and then include Succ4J as a dependency:
 Replace VERSION with the version you want to use
 
 ## Downloading as a standalone jar
-Head to the releases page, download the latest release, and add it as a dependency to your project.
+Head to the packages tab, select the latest version, and there you can download it as a separate .jar
 
 # Changelog:
+1.1.0+sources: Added source jar generation to maven packaging, removed releases, use packaged versions
 
 1.1.0: Breaking refactors: Moved package from succ to com.github.falsepattern.succ4j
 
