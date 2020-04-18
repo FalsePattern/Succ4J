@@ -25,7 +25,7 @@ and add the following text:
 <settings>
 	<servers>
 		<server>
-			<id>github</id>
+			<id>Succ4J-mvn-repo</id>
 			<username>USERNAME</username>
 			<password>TOKEN</password>
 		</server>
