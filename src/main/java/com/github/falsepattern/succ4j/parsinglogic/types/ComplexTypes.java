@@ -62,9 +62,7 @@ public class ComplexTypes {
             if (Modifier.isStatic(mod) || Modifier.isFinal(mod)) continue;
             if (f.isAnnotationPresent(DontSave.class)) continue;
             if (Modifier.isPrivate(mod) && !f.isAnnotationPresent(DoSave.class)) continue;
-            if (Modifier.isPrivate(mod)) {
-                f.setAccessible(true);
-            }
+            f.setAccessible(true);
             validFields.add(f);
         }
 
