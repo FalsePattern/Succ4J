@@ -12,6 +12,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class ComplexTypes {
@@ -56,7 +57,7 @@ public class ComplexTypes {
     public static List<Field> getValidFields(Class<?> type) {
         List<Field> validFields = new ArrayList<>();
 
-        Field[] allFields = type.getDeclaredFields();
+        Field[] allFields = getFieldsUpTo(type, Object.class).toArray(new Field[0]);
         for (Field f: allFields) {
             int mod = f.getModifiers();
             if (Modifier.isStatic(mod) || Modifier.isFinal(mod)) continue;
@@ -67,5 +68,30 @@ public class ComplexTypes {
         }
 
         return validFields;
+    }
+
+    private static List<Field> getFieldsUpTo(Class<?> startClass,
+                                                Class<?> rootParent) {
+        List<Field> currentClassFields = new ArrayList<>(Arrays.asList(startClass.getDeclaredFields()));
+        Class<?> parentClass = startClass.getSuperclass();
+
+        if (parentClass != null && (isSubClass(parentClass, rootParent) || parentClass.equals(rootParent))) {
+            List<Field> parentClassFields = getFieldsUpTo(parentClass, rootParent);
+            currentClassFields.addAll(parentClassFields);
+        }
+
+        return currentClassFields;
+    }
+
+    private static boolean isSubClass(Class<?> child, Class<?> parent) {
+        if (parent == null) {
+            return true;
+        }
+        try {
+            child.asSubclass(parent);
+            return true;
+        } catch (ClassCastException e) {
+            return false;
+        }
     }
 }

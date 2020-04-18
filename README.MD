@@ -60,6 +60,8 @@ Replace VERSION with the version you want to use
 Head to the packages tab, select the latest version, and there you can download it as a separate .jar
 
 # Changelog:
+1.1.3: Can now save fields of superclasses. Previously superclass data was lost due to the getDeclaredFields() not returning superclass fields.
+
 1.1.2: Fix error when trying to save/load types containing arrays of references (example: List<Object[]>)
 
 1.1.1: Fix security exception when trying to access protected or package-private fields

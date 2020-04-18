@@ -1,5 +1,6 @@
 package com.github.falsepattern.succ4j.saveloadtests;
 
+import com.github.falsepattern.succ4j.ComplexChild;
 import com.github.falsepattern.util.reflectionhelper.ClassTree;
 import org.junit.jupiter.api.Test;
 import com.github.falsepattern.succ4j.ComplexType;
@@ -14,5 +15,10 @@ public class SaveLoad_ComplexTypeTests {
     @Test
     public void saveLoad_ComplexType_Null() {
         TestUtilities.performSaveLoadTest(new ClassTree<>(ComplexType.class), null);
+    }
+
+    @Test
+    public void saveLoad_ComplexTypeSubclass() {
+        TestUtilities.performSaveLoadTest(new ClassTree<>(ComplexChild.class), new ComplexChild(1, "a", true));
     }
 }
