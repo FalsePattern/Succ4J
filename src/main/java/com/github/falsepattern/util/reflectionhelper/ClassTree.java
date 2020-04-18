@@ -65,7 +65,7 @@ public class ClassTree<T> {
                   : part.startsWith("float") ? "F"
                   : part.startsWith("double") ? "D"
                   : part.startsWith("boolean") ? "Z"
-                  : "L" + part.substring(0, part.indexOf('['));
+                  : "L" + part.substring(0, part.indexOf('[')) + ";";
           StringBuilder result = new StringBuilder();
           while (part.contains("[]")) {
             part = part.replaceFirst("\\[]", "");

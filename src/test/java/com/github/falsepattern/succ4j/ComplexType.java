@@ -6,8 +6,8 @@ public class ComplexType {
     public int Integer;
     @DoSave
     private String String;
-    @DoSave
-    public boolean Boolean;
+
+    protected boolean Boolean;
 
     // parameter-less constructor required for reflection
     public ComplexType(){}

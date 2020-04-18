@@ -105,6 +105,21 @@ public class SaveLoad_CollectionTypeTests {
         TestUtilities.assertMapContentsEqual(savedMapComplex, loadedValue);
     }
 
+    @Test
+    public void saveLoad_NestedArray_ComplexType() {
+        ComplexType[][] savedValue = new ComplexType[2][2];
+        savedValue[0][0] = new ComplexType(0, "a", false);
+        savedValue[0][1] = new ComplexType(1, "b", true);
+        savedValue[1][0] = new ComplexType(2, "c", true);
+        savedValue[1][1] = new ComplexType(3, "d", false);
+        MemoryDataFile file = new MemoryDataFile();
+        file.set(new ClassTree<>(savedValue.getClass()), savedValueKey, savedValue);
+        ComplexType[][] loadedValue = file.get(new ClassTree<>(savedValue.getClass()), savedValueKey);
+        for (int i = 0; i < 2; i++) {
+            Assertions.assertArrayEquals(savedValue[i], loadedValue[i]);
+        }
+    }
+
     private static final int[][][][] deeplyNestedIntArray = new int[][][][]
             {
                     new int[][][]
