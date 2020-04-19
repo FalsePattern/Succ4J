@@ -68,9 +68,9 @@
     </dependencies>
     <distributionManagement>
         <repository>
-            <id>github</id>
-            <name>GitHub FalsePattern Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/FalsePattern/Succ4J</url>
+            <id>FalsePattern-maven-repo</id>
+            <name>FalsePattern Maven Packages</name>
+            <url>https://falsepattern.ddns.net/maven2/</url>
         </repository>
     </distributionManagement>
     
