@@ -177,21 +177,21 @@ public abstract class ReadableDataFile {
     }
 
     /**
-     * Like {@link #getAtPath(ClassTree, Object, String...)}, but the default value is searched for in the default file text
+     * Like {@link #getAtPath(ClassTree, Object, String[])}, but the default value is searched for in the default file text
      * @param type The type to get the data as (required due to type erasure)
      * @param path The nested path of the desired data
      */
     @SuppressWarnings("unchecked")
-    public <T> T getAtPath(ClassTree<T> type, String... path) {
+    public <T> T getAtPath(ClassTree<T> type, String[] path) {
         return (T) getAtPathNonGeneric(type, path);
     }
 
     /**
-     * Like {@link #getAtPathNonGeneric(ClassTree, Object, String...)}, but the value is searched for in the default file text
+     * Like {@link #getAtPathNonGeneric(ClassTree, Object, String[])}, but the value is searched for in the default file text
      * @param type The type to get the data as
      * @param path The nested path of the desired data
      */
-    public Object getAtPathNonGeneric(ClassTree<?> type, String... path) {
+    public Object getAtPathNonGeneric(ClassTree<?> type, String[] path) {
         Object defaultDefaultValue = ParsingLogicExtensions.getDefaultValue(type);
         Object defaultValue = defaultFileCache != null ? defaultFileCache.getAtPathNonGeneric(type, defaultDefaultValue, path) : defaultDefaultValue;
 
@@ -204,17 +204,17 @@ public abstract class ReadableDataFile {
      * @param path The nested path of the desired data
      */
     @SuppressWarnings("unchecked")
-    public <T> T getAtPath(ClassTree<T> type, T defaultValue, String... path) {
+    public <T> T getAtPath(ClassTree<T> type, T defaultValue, String[] path) {
         return (T) getAtPathNonGeneric(type, defaultValue, path);
     }
 
     /**
-     * Non-generic version of {@link #getAtPath(ClassTree, Object, String...)}. You probably want to use {@link #getAtPath(ClassTree, Object, String...)}.
+     * Non-generic version of {@link #getAtPath(ClassTree, Object, String[])}. You probably want to use {@link #getAtPath(ClassTree, Object, String[])}.
      * @param type The type to get the data as
      * @param defaultValue If the key does not exist in the file, this value is returned instead.
      * @param path The nested path of the desired data
      */
-    public Object getAtPathNonGeneric(ClassTree<?> type, Object defaultValue, String... path) {
+    public Object getAtPathNonGeneric(ClassTree<?> type, Object defaultValue, String[] path) {
         if (defaultValue != null && ! type.type.equals(defaultValue.getClass())) {
             throw new RuntimeException("defaultValue is not of type " + type.toString());
         }
